@@ -1,4 +1,3 @@
-import functools
 import os
 import sys
 
@@ -20,12 +19,13 @@ class Item(urwid.WidgetWrap):
         return attr, entry.name
 
     def __init__(self, entry: os.DirEntry):
+        self._entry = entry
         w = urwid.SelectableIcon(self._markup(entry))
         super().__init__(w)
 
     def keypress(self, size, key):
         if key in ("l", "enter", "right"):
-            urwid.emit_signal(self, "selected")
+            urwid.emit_signal(self, "selected", self._entry)
             return
         return key
 
@@ -66,8 +66,7 @@ class BFM(urwid.WidgetWrap):
             for entry in sorted(it, key=sorting_key):
                 item = Item(entry)
                 body_contents.append(item)
-                callback = functools.partial(on_item_selected, entry)
-                urwid.connect_signal(item, "selected", callback)
+                urwid.connect_signal(item, "selected", on_item_selected)
 
     def keypress(self, size, key):
         key_to_propagate = key
