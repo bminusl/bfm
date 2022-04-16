@@ -45,8 +45,9 @@ class TreeNavigationMixin:
         self._on_path_changed(self.__path)
 
     def ascend(self):
-        self.__path = os.path.split(self.__path)[0]
+        self.__path, from_ = os.path.split(self.__path)
         self._on_path_changed(self.__path)
+        return from_
 
     @staticmethod
     def __sorting_key(entry):
@@ -68,10 +69,37 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
-        self._w_contents = weakref.proxy(w_body.body)
+        self._w_body = weakref.proxy(w_body)
+        self._w_body_contents = weakref.proxy(w_body.body)
+
+        # Keep focus positions when navigating the tree
+        self.focus_cache = {}
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
+
+    def descend(self, *args, **kwargs):
+        self.focus_cache[
+            self._TreeNavigationMixin__path
+        ] = self._w_body.focus_position
+        super().descend(*args, **kwargs)
+        # BBB: py3.8+ walrus operator
+        position = self.focus_cache.get(self._TreeNavigationMixin__path)
+        if position:
+            self._w_body.set_focus(position)
+
+    def ascend(self, *args, **kwargs):
+        if self._w_body_contents:
+            self.focus_cache[
+                self._TreeNavigationMixin__path
+            ] = self._w_body.focus_position
+        from_ = super().ascend(*args, **kwargs)
+        position = next(
+            i
+            for i, item in enumerate(self._w_body_contents)
+            if item.name == from_
+        )
+        self._w_body.set_focus(position)
 
     def _on_path_changed(self, new_path: str):
         def on_item_selected(item: Item):
@@ -79,11 +107,11 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
                 self.descend(item.name)
 
         self._w_path.set_text(("path", new_path))
-        self._w_contents.clear()
+        self._w_body_contents.clear()
 
         for args in self.scan():
             item = Item(*args)
-            self._w_contents.append(item)
+            self._w_body_contents.append(item)
             urwid.connect_signal(item, "selected", on_item_selected)
 
     def keypress(self, size, key):
