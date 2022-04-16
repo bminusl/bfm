@@ -50,7 +50,7 @@ class TreeNavigationMixin:
         return from_
 
     @staticmethod
-    def __sorting_key(entry):
+    def __sorting_key(entry: os.DirEntry):
         return (not entry.is_dir(follow_symlinks=False), entry.name.lower())
 
     def scan(self):
