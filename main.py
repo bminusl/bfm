@@ -5,24 +5,28 @@ import weakref
 import urwid
 
 
-class Item(urwid.WidgetWrap):
+class Item(urwid.Text):
     signals = ["selected"]
+    _selectable = True
 
-    @staticmethod
-    def _markup(name: str, is_dir: bool):
+    def _markup(self, prefix="", suffix=""):
         # TODO: handle symlinks
-        if is_dir:
+        if self.is_dir:
             attr = "folder"
         else:
             attr = "file"
         # attr = "unknown"
-        return attr, name
+        return attr, prefix + self.name + suffix
 
     def __init__(self, name: str, is_dir: bool):
         self.name = name
         self.is_dir = is_dir
-        w = urwid.SelectableIcon(self._markup(name, is_dir))
-        super().__init__(w)
+        super().__init__(self._markup())
+
+    def render(self, size, focus=False):
+        prefix = "> " if focus else "  "
+        self.set_text(self._markup(prefix))
+        return super().render(size, focus)
 
     def keypress(self, size, key):
         if key in ("l", "enter", "right"):
