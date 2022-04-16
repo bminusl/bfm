@@ -84,7 +84,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
     def keypress(self, size, key):
         key_to_propagate = key
-        if key in ("h", "delete", "left"):
+        if key in ("h", "backspace", "left"):
             self.ascend()
             return
         elif key in ("j", "down"):
