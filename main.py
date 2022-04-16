@@ -56,12 +56,15 @@ class TreeNavigationMixin:
 
 class BFM(TreeNavigationMixin, urwid.WidgetWrap):
     def __init__(self, path: str):
-        header = urwid.Text("")
-        body = urwid.ListBox(urwid.SimpleListWalker([]))
-        w = urwid.Frame(body, header)
+        w_path = urwid.Text("")
+        w_command = urwid.Text("")
+        w_header = urwid.Pile([w_path, w_command])
+        w_body = urwid.ListBox(urwid.SimpleListWalker([]))
+        w = urwid.Frame(w_body, w_header)
 
-        self._w_path = weakref.proxy(header)
-        self._w_contents = weakref.proxy(body.body)
+        self._w_path = weakref.proxy(w_path)
+        self._w_command = weakref.proxy(w_command)
+        self._w_contents = weakref.proxy(w_body.body)
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
