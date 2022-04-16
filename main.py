@@ -32,19 +32,20 @@ class Item(urwid.WidgetWrap):
 
 class BFM(urwid.WidgetWrap):
     def __init__(self, path: str):
-        header = urwid.Text("")
+        self._w_path = header = urwid.Text("")
         body = urwid.ListBox(urwid.SimpleListWalker([]))
+        self._w_contents = body.body
         w = urwid.Frame(body, header)
         super().__init__(w)
         self.change_path(path)
 
     def descend(self, into: str):
-        current = self._w.header.text
+        current = self._w_path.text
         new_path = os.path.join(current, into)
         self.change_path(new_path)
 
     def ascend(self):
-        current = self._w.header.text
+        current = self._w_path.text
         new_path = os.path.split(current)[0]
         self.change_path(new_path)
 
@@ -59,13 +60,12 @@ class BFM(urwid.WidgetWrap):
                 # TODO:
                 pass
 
-        header, body_contents = self._w.header, self._w.body.body
-        header.set_text(("path", new_path))
-        body_contents.clear()
+        self._w_path.set_text(("path", new_path))
+        self._w_contents.clear()
         with os.scandir(new_path) as it:
             for entry in sorted(it, key=sorting_key):
                 item = Item(entry)
-                body_contents.append(item)
+                self._w_contents.append(item)
                 urwid.connect_signal(item, "selected", on_item_selected)
 
     def keypress(self, size, key):
