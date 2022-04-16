@@ -1,6 +1,7 @@
 import os
 import sys
 import weakref
+from subprocess import call
 
 import urwid
 
@@ -11,16 +12,15 @@ class Item(urwid.Text):
 
     def _markup(self, prefix="", suffix=""):
         # TODO: handle symlinks
-        if self.is_dir:
+        if self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
         else:
             attr = "file"
         # attr = "unknown"
-        return attr, prefix + self.name + suffix
+        return attr, prefix + self.entry.name + suffix
 
-    def __init__(self, name: str, is_dir: bool):
-        self.name = name
-        self.is_dir = is_dir
+    def __init__(self, entry: os.DirEntry):
+        self.entry = entry
         super().__init__(self._markup())
 
     def render(self, size, focus=False):
@@ -56,7 +56,7 @@ class TreeNavigationMixin:
     def scan(self):
         with os.scandir(self.__path) as it:
             for entry in sorted(it, key=self.__sorting_key):
-                yield entry.name, entry.is_dir(follow_symlinks=False)
+                yield entry
 
 
 class BFM(TreeNavigationMixin, urwid.WidgetWrap):
@@ -97,22 +97,30 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         position = next(
             i
             for i, item in enumerate(self._w_body_contents)
-            if item.name == from_
+            if item.entry.name == from_
         )
         self._w_body.set_focus(position)
 
     def _on_path_changed(self, new_path: str):
         def on_item_selected(item: Item):
-            if item.is_dir:
-                self.descend(item.name)
+            if item.entry.is_dir(follow_symlinks=False):
+                self.descend(item.entry.name)
+            else:
+                self.edit_file(item.entry.path)
 
         self._w_path.set_text(("path", new_path))
         self._w_body_contents.clear()
 
-        for args in self.scan():
-            item = Item(*args)
+        for entry in self.scan():
+            item = Item(entry)
             self._w_body_contents.append(item)
             urwid.connect_signal(item, "selected", on_item_selected)
+
+    def edit_file(self, path):
+        # see https://github.com/urwid/urwid/issues/302
+        loop.screen.stop()
+        call(["vim", path])
+        loop.screen.start()
 
     def keypress(self, size, key):
         key_to_propagate = key
@@ -141,6 +149,7 @@ def main():
         path = os.path.abspath(os.path.expanduser(sys.argv[1]))
     except IndexError:
         path = os.getcwd()
+    global loop
     loop = urwid.MainLoop(BFM(path), palette, unhandled_input=exit_on_q)
     loop.run()
 
