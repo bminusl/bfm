@@ -22,5 +22,7 @@ def main():
     except IndexError:
         path = os.getcwd()
     global loop
-    loop = urwid.MainLoop(BFM(path), palette, unhandled_input=exit_on_q)
+    loop = urwid.MainLoop(
+        BFM(path), palette, unhandled_input=exit_on_q, handle_mouse=False
+    )
     loop.run()
