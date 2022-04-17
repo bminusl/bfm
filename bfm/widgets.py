@@ -4,6 +4,8 @@ from subprocess import call
 
 import urwid
 
+from bfm.util import mydefaultdict
+
 from .mixins import TreeNavigationMixin
 
 
@@ -71,8 +73,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w = urwid.Frame(w_body, w_header)
 
         # Cache ItemList instances when navigating the tree to reuse them later
-        # XXX/TODO: need a better name?
-        self.cache = {}
+        self.cache = mydefaultdict(lambda key: self.create_item_list(key))
 
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
@@ -82,14 +83,11 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
-    def _get_item_list_by_path(self, path: str):
-        w = self.cache.get(path)
-        if w is None:
-            w = ItemList([Item(entry) for entry in self.scanpath(path)])
-            for item in w.body:
-                urwid.connect_signal(item, "selected", self._on_item_selected)
-            urwid.connect_signal(w.body, "modified", self._update_preview)
-            self.cache[path] = w
+    def create_item_list(self, path: str):
+        w = ItemList([Item(entry) for entry in self.scanpath(path)])
+        for item in w.body:
+            urwid.connect_signal(item, "selected", self._on_item_selected)
+        urwid.connect_signal(w.body, "modified", self._update_preview)
         return w
 
     def _update_preview(self):
@@ -110,7 +108,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                w = self._get_item_list_by_path(path)
+                w = self.cache[path]
             else:
                 w = preview_file(path)
         else:
@@ -135,9 +133,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-        self._w_item_list_placeholder.original_widget = (
-            self._get_item_list_by_path(new_path)
-        )
+        self._w_item_list_placeholder.original_widget = self.cache[new_path]
         self._update_preview()
 
     def edit_file(self, path: str):
