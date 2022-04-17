@@ -16,14 +16,16 @@ class Item(urwid.WidgetWrap):
     def __init__(self, number: int, entry: os.DirEntry):
         self.entry = entry
 
+        text = entry.name
         # TODO: handle symlinks
         if self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
+            text += "/"
         else:
             attr = "file"
         # attr = "unknown"
 
-        w = urwid.Text(entry.name)
+        w = urwid.Text(text)
         w._selectable = True
         w = urwid.Padding(w, left=1, right=1)
         w = urwid.AttrMap(w, attr, focus_map="focus")
