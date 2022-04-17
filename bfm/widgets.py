@@ -101,10 +101,14 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
         def preview_file(path):
             # TODO: catch errors, large files, etc
-            with open(path) as f:
-                w = urwid.Text(f.read())
-                w = urwid.Filler(w, valign="top")
-                return w
+            try:
+                with open(path) as f:
+                    text = f.read()
+            except Exception as e:
+                text = str(e)
+            w = urwid.Text(text)
+            w = urwid.Filler(w, valign="top")
+            return w
 
         # BBB: py3.8+ walrus operator
         item = get_focused_item()
