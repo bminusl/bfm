@@ -119,7 +119,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             self._w_items_contents.append(item)
             urwid.connect_signal(item, "selected", self._on_item_selected)
 
-    def edit_file(self, path):
+    def edit_file(self, path: str):
         from . import loop
 
         # see https://github.com/urwid/urwid/issues/302
