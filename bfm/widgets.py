@@ -100,7 +100,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
                 return w_folder.get_focus()[0]
 
         def preview_file(path):
-            # TODO: catch errors, large files, etc
+            # TODO: large files, etc
             try:
                 with open(path) as f:
                     text = f.read()
