@@ -70,6 +70,10 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
         w = urwid.Frame(w_body, w_header)
 
+        # Cache ItemList instances when navigating the tree to reuse them later
+        # XXX/TODO: need a better name?
+        self.cache = {}
+
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
         self._w_item_list_placeholder = weakref.proxy(w_item_list_placeholder)
@@ -78,24 +82,41 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
-        # urwid.connect_signal(w_item_list.body, "modified", self._on_tmp_foo)
-        # self._on_tmp_foo()
+    def _get_item_list_by_path(self, path: str):
+        w = self.cache.get(path)
+        if w is None:
+            w = ItemList([Item(entry) for entry in self.scanpath(path)])
+            for item in w.body:
+                urwid.connect_signal(item, "selected", self._on_item_selected)
+            urwid.connect_signal(w.body, "modified", self._update_preview)
+            self.cache[path] = w
+        return w
 
-    def _on_tmp_foo(self):
-        if self._w_item_list.body:
-            item = self._w_item_list.get_focus()[0]
+    def _update_preview(self):
+        def get_focused_item():
+            w_item_list = self._w_item_list_placeholder.original_widget
+            if w_item_list.body:
+                return w_item_list.get_focus()[0]
+
+        def preview_file(path):
+            # TODO: catch errors, large files, etc
+            with open(path) as f:
+                w = urwid.Text(f.read())
+                w = urwid.Filler(w, valign="top")
+                return w
+
+        # BBB: py3.8+ walrus operator
+        item = get_focused_item()
+        if item:
+            path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                contents = [Item(e) for e in self.scanpath(item.entry.path)]
-                w_new = ItemList(contents)
+                w = self._get_item_list_by_path(path)
             else:
-                # TODO: catch errors, large files, etc
-                with open(item.entry.path) as f:
-                    w_new = urwid.Text(f.read())
+                w = preview_file(path)
         else:
-            w_new = urwid.Text("")
-        if isinstance(w_new, urwid.Text):
-            w_new = urwid.Filler(w_new, valign="top")
-        self._w_preview_placeholder.original_widget = w_new
+            w = urwid.Text("")
+            w = urwid.Filler(w, valign="top")
+        self._w_preview_placeholder.original_widget = w
 
     def _on_item_selected(self, item: Item):
         if item.entry.is_dir(follow_symlinks=False):
@@ -105,14 +126,10 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-
-        items = [Item(entry) for entry in self.scanpath()]
-        w_item_list = ItemList(items)
-
-        for item in w_item_list.body:
-            urwid.connect_signal(item, "selected", self._on_item_selected)
-
-        self._w_item_list_placeholder.original_widget = w_item_list
+        self._w_item_list_placeholder.original_widget = (
+            self._get_item_list_by_path(new_path)
+        )
+        self._update_preview()
 
     def edit_file(self, path: str):
         from . import loop
