@@ -42,9 +42,10 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w_command = urwid.Text("")
         w_header = urwid.Pile([w_path, w_command])
 
+        w_empty = urwid.SolidFill("x")  # XXX: whatever
         w_items = urwid.ListBox(urwid.SimpleListWalker([]))
-        w_preview = urwid.WidgetPlaceholder(None)  # XXX: None is hacky
-        w_body = urwid.Columns([w_items, w_preview])
+        w_preview_placeholder = urwid.WidgetPlaceholder(w_empty)
+        w_body = urwid.Columns([w_items, w_preview_placeholder])
 
         w = urwid.Frame(w_body, w_header)
 
@@ -52,7 +53,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         self._w_command = weakref.proxy(w_command)
         self._w_items = weakref.proxy(w_items)
         self._w_items_contents = weakref.proxy(w_items.body)
-        self._w_preview = weakref.proxy(w_preview)
+        self._w_preview_placeholder = weakref.proxy(w_preview_placeholder)
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
@@ -76,7 +77,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             w_new = urwid.Text("")
         if isinstance(w_new, urwid.Text):
             w_new = urwid.Filler(w_new, valign="top")
-        self._w_preview.original_widget = w_new
+        self._w_preview_placeholder.original_widget = w_new
 
     def _on_item_selected(self, item: Item):
         if item.entry.is_dir(follow_symlinks=False):
