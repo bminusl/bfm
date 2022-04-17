@@ -68,9 +68,12 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
         w_folder_placeholder = urwid.WidgetPlaceholder(w_empty)
         w_preview_placeholder = AlwaysFocusedWidgetPlaceholder(w_empty)
-        w_body = urwid.Columns([w_folder_placeholder, w_preview_placeholder])
+        w_body = urwid.Columns(
+            [w_folder_placeholder, w_preview_placeholder], dividechars=1
+        )
 
         w = urwid.Frame(w_body, w_header)
+        w = urwid.Padding(w, left=1, right=1)
 
         # Cache Folder instances when navigating the tree to reuse them later
         self._folders = mydefaultdict(lambda key: self.create_folder(key))
