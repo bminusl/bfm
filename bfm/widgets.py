@@ -124,6 +124,15 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         else:
             self.edit_file(item.entry.path)
 
+    def ascend(self, *args, **kwargs):
+        from_ = super().ascend(*args, **kwargs)
+        # Patch to focus the correct item when ascending
+        item_list = self._w_item_list_placeholder.original_widget
+        for i, item in enumerate(item_list.body):
+            if item.entry.name == from_:
+                item_list.set_focus(i)
+                break
+
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
         self._w_item_list_placeholder.original_widget = (
