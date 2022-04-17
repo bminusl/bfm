@@ -67,7 +67,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         # [0]: https://gitter.im/urwid/community?at=5f90305cea6bfb0a9a4bd0ac
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
         w_item_list_placeholder = urwid.WidgetPlaceholder(w_empty)
-        w_preview_placeholder = MyWidgetPlaceholder(w_empty)
+        w_preview_placeholder = AlwaysFocusedWidgetPlaceholder(w_empty)
         w_body = urwid.Columns([w_item_list_placeholder, w_preview_placeholder])
 
         w = urwid.Frame(w_body, w_header)
@@ -151,6 +151,6 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         return super().keypress(size, key)
 
 
-class MyWidgetPlaceholder(urwid.WidgetPlaceholder):
+class AlwaysFocusedWidgetPlaceholder(urwid.WidgetPlaceholder):
     def render(self, size, focus=False):
         return super().render(size, True)
