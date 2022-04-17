@@ -9,27 +9,25 @@ from bfm.util import mydefaultdict
 from .mixins import TreeNavigationMixin
 
 
-class Item(urwid.Text):
+class Item(urwid.WidgetWrap):
     signals = ["selected"]
     _selectable = True
 
-    def _markup(self, prefix="", suffix=""):
+    def __init__(self, number: int, entry: os.DirEntry):
+        self.entry = entry
+
         # TODO: handle symlinks
         if self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
         else:
             attr = "file"
         # attr = "unknown"
-        return attr, prefix + self.entry.name + suffix
 
-    def __init__(self, entry: os.DirEntry):
-        self.entry = entry
-        super().__init__(self._markup())
-
-    def render(self, size, focus=False):
-        prefix = "> " if focus else "  "
-        self.set_text(self._markup(prefix))
-        return super().render(size, focus)
+        w = urwid.Text(entry.name)
+        w._selectable = True
+        w = urwid.Padding(w, left=1, right=1)
+        w = urwid.AttrMap(w, attr, focus_map="focus")
+        super().__init__(w)
 
     def keypress(self, size, key):
         if key in ("l", "enter", "right"):
@@ -84,7 +82,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, w)
 
     def create_folder(self, path: str):
-        w = Folder([Item(entry) for entry in self.scanpath(path)])
+        w = Folder([Item(*args) for args in enumerate(self.scanpath(path))])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
         urwid.connect_signal(w.body, "modified", self._update_preview)

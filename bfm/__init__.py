@@ -3,6 +3,7 @@ import sys
 
 import urwid
 
+from .palette import palette
 from .widgets import BFM
 
 
@@ -11,12 +12,6 @@ def main():
         if key == "q":
             raise urwid.ExitMainLoop
 
-    palette = [
-        ("path", "light cyan", "", "bold"),
-        ("folder", "light cyan", ""),
-        ("file", "", ""),
-        ("unknown", "", "light magenta"),
-    ]
     try:
         path = os.path.abspath(os.path.expanduser(sys.argv[1]))
     except IndexError:
