@@ -54,9 +54,6 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         self._w_items_contents = weakref.proxy(w_items.body)
         self._w_preview = weakref.proxy(w_preview)
 
-        # Keep focus positions when navigating the tree
-        self.focus_cache = {}
-
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
@@ -64,29 +61,6 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             w_items.body, "modified", self._on_items_contents_modified
         )
         self._on_items_contents_modified()
-
-    def descend(self, *args, **kwargs):
-        self.focus_cache[
-            self._TreeNavigationMixin__path
-        ] = self._w_items.focus_position
-        super().descend(*args, **kwargs)
-        # BBB: py3.8+ walrus operator
-        position = self.focus_cache.get(self._TreeNavigationMixin__path)
-        if position:
-            self._w_items.set_focus(position)
-
-    def ascend(self, *args, **kwargs):
-        if self._w_items_contents:
-            self.focus_cache[
-                self._TreeNavigationMixin__path
-            ] = self._w_items.focus_position
-        from_ = super().ascend(*args, **kwargs)
-        position = next(
-            i
-            for i, item in enumerate(self._w_items_contents)
-            if item.entry.name == from_
-        )
-        self._w_items.set_focus(position)
 
     def _on_items_contents_modified(self):
         if self._w_items_contents:
