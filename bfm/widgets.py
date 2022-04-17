@@ -1,9 +1,10 @@
 import os
-import sys
 import weakref
 from subprocess import call
 
 import urwid
+
+from .mixins import TreeNavigationMixin
 
 
 class Item(urwid.Text):
@@ -33,30 +34,6 @@ class Item(urwid.Text):
             urwid.emit_signal(self, "selected", self)
             return
         return key
-
-
-class TreeNavigationMixin:
-    def __init__(self, path: str):
-        self.__path = path
-        self._on_path_changed(self.__path)
-
-    def descend(self, into: str):
-        self.__path = os.path.join(self.__path, into)
-        self._on_path_changed(self.__path)
-
-    def ascend(self):
-        self.__path, from_ = os.path.split(self.__path)
-        self._on_path_changed(self.__path)
-        return from_
-
-    @staticmethod
-    def __sorting_key(entry: os.DirEntry):
-        return (not entry.is_dir(follow_symlinks=False), entry.name.lower())
-
-    def scan(self):
-        with os.scandir(self.__path) as it:
-            for entry in sorted(it, key=self.__sorting_key):
-                yield entry
 
 
 class BFM(TreeNavigationMixin, urwid.WidgetWrap):
@@ -117,6 +94,8 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             urwid.connect_signal(item, "selected", on_item_selected)
 
     def edit_file(self, path):
+        from . import loop
+
         # see https://github.com/urwid/urwid/issues/302
         loop.screen.stop()
         call(["vim", path])
@@ -132,27 +111,3 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         elif key in ("k", "up"):
             key_to_propagate = "up"
         return super().keypress(size, key_to_propagate)
-
-
-def main():
-    def exit_on_q(key):
-        if key == "q":
-            raise urwid.ExitMainLoop
-
-    palette = [
-        ("path", "light cyan", "", "bold"),
-        ("folder", "light cyan", ""),
-        ("file", "", ""),
-        ("unknown", "", "light magenta"),
-    ]
-    try:
-        path = os.path.abspath(os.path.expanduser(sys.argv[1]))
-    except IndexError:
-        path = os.getcwd()
-    global loop
-    loop = urwid.MainLoop(BFM(path), palette, unhandled_input=exit_on_q)
-    loop.run()
-
-
-if __name__ == "__main__":
-    main()
