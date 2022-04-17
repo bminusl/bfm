@@ -38,7 +38,7 @@ class Item(urwid.Text):
         return key
 
 
-class ItemList(urwid.ListBox):
+class Folder(urwid.ListBox):
     def __init__(self, body):
         super().__init__(urwid.SimpleListWalker(body))
 
@@ -66,25 +66,25 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         # is thus used as a workaround/trick. See this discussion[0].
         # [0]: https://gitter.im/urwid/community?at=5f90305cea6bfb0a9a4bd0ac
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
-        w_item_list_placeholder = urwid.WidgetPlaceholder(w_empty)
+        w_folder_placeholder = urwid.WidgetPlaceholder(w_empty)
         w_preview_placeholder = AlwaysFocusedWidgetPlaceholder(w_empty)
-        w_body = urwid.Columns([w_item_list_placeholder, w_preview_placeholder])
+        w_body = urwid.Columns([w_folder_placeholder, w_preview_placeholder])
 
         w = urwid.Frame(w_body, w_header)
 
-        # Cache ItemList instances when navigating the tree to reuse them later
-        self.cache = mydefaultdict(lambda key: self.create_item_list(key))
+        # Cache Folder instances when navigating the tree to reuse them later
+        self._folders = mydefaultdict(lambda key: self.create_folder(key))
 
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
-        self._w_item_list_placeholder = weakref.proxy(w_item_list_placeholder)
+        self._w_folder_placeholder = weakref.proxy(w_folder_placeholder)
         self._w_preview_placeholder = weakref.proxy(w_preview_placeholder)
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
-    def create_item_list(self, path: str):
-        w = ItemList([Item(entry) for entry in self.scanpath(path)])
+    def create_folder(self, path: str):
+        w = Folder([Item(entry) for entry in self.scanpath(path)])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
         urwid.connect_signal(w.body, "modified", self._update_preview)
@@ -92,9 +92,9 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
     def _update_preview(self):
         def get_focused_item():
-            w_item_list = self._w_item_list_placeholder.original_widget
-            if w_item_list.body:
-                return w_item_list.get_focus()[0]
+            w_folder = self._w_folder_placeholder.original_widget
+            if w_folder.body:
+                return w_folder.get_focus()[0]
 
         def preview_file(path):
             # TODO: catch errors, large files, etc
@@ -108,7 +108,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                w = self.cache[path]
+                w = self._folders[path]
             else:
                 w = preview_file(path)
         else:
@@ -125,15 +125,15 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
     def ascend(self, *args, **kwargs):
         from_ = super().ascend(*args, **kwargs)
         # Patch to focus the correct item when ascending
-        item_list = self._w_item_list_placeholder.original_widget
-        for i, item in enumerate(item_list.body):
+        folder = self._w_folder_placeholder.original_widget
+        for i, item in enumerate(folder.body):
             if item.entry.name == from_:
-                item_list.set_focus(i)
+                folder.set_focus(i)
                 break
 
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-        self._w_item_list_placeholder.original_widget = self.cache[new_path]
+        self._w_folder_placeholder.original_widget = self._folders[new_path]
         self._update_preview()
 
     def edit_file(self, path: str):
