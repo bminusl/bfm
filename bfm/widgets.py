@@ -65,8 +65,8 @@ class Folder(urwid.ListBox):
         super().__init__(urwid.SimpleListWalker(items))
         urwid.connect_signal(self.body, "modified", self._on_body_modified)
 
-    def _on_body_modified(self):
-        urwid.emit_signal(self, "focus_changed", self.get_focused_item())
+    def get_focused_item(self) -> Item:
+        return self.get_focus()[0] if self.body else None
 
     def keypress(self, size, key):
         key_to_propagate = key
@@ -76,8 +76,8 @@ class Folder(urwid.ListBox):
             key_to_propagate = "up"
         return super().keypress(size, key_to_propagate)
 
-    def get_focused_item(self) -> Item:
-        return self.get_focus()[0] if self.body else None
+    def _on_body_modified(self):
+        urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
 
 class BFM(TreeNavigationMixin, urwid.WidgetWrap):
@@ -118,12 +118,35 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
+    def ascend(self, *args, **kwargs):
+        from_ = super().ascend(*args, **kwargs)
+        # Patch to focus the correct item when ascending
+        folder = self._w_folder_placeholder.original_widget
+        for i, item in enumerate(folder.body):
+            if item.entry.name == from_:
+                folder.set_focus(i)
+                break
+
     def create_folder(self, path: str):
         w = Folder([Item(*args) for args in enumerate(self.scanpath(path))])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
         urwid.connect_signal(w, "focus_changed", self._on_folder_focus_changed)
         return w
+
+    def edit_file(self, path: str):
+        from . import loop
+
+        # see https://github.com/urwid/urwid/issues/302
+        loop.screen.stop()
+        call(["vim", path])
+        loop.screen.start()
+
+    def keypress(self, size, key):
+        if key in ("h", "backspace", "left"):
+            self.ascend()
+            return
+        return super().keypress(size, key)
 
     def _on_folder_focus_changed(self, item: Item):
         if item:
@@ -150,31 +173,8 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         else:
             self.edit_file(item.entry.path)
 
-    def ascend(self, *args, **kwargs):
-        from_ = super().ascend(*args, **kwargs)
-        # Patch to focus the correct item when ascending
-        folder = self._w_folder_placeholder.original_widget
-        for i, item in enumerate(folder.body):
-            if item.entry.name == from_:
-                folder.set_focus(i)
-                break
-
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
         folder = self._folders[new_path]
         self._w_folder_placeholder.original_widget = folder
         self._on_folder_focus_changed(folder.get_focused_item())  # Trick
-
-    def edit_file(self, path: str):
-        from . import loop
-
-        # see https://github.com/urwid/urwid/issues/302
-        loop.screen.stop()
-        call(["vim", path])
-        loop.screen.start()
-
-    def keypress(self, size, key):
-        if key in ("h", "backspace", "left"):
-            self.ascend()
-            return
-        return super().keypress(size, key)
