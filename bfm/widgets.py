@@ -59,8 +59,14 @@ class Item(urwid.WidgetWrap):
 
 
 class Folder(urwid.ListBox):
-    def __init__(self, body):
-        super().__init__(urwid.SimpleListWalker(body))
+    signals = ["focus_changed"]
+
+    def __init__(self, items):
+        super().__init__(urwid.SimpleListWalker(items))
+        urwid.connect_signal(self.body, "modified", self._on_body_modified)
+
+    def _on_body_modified(self):
+        urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
     def keypress(self, size, key):
         key_to_propagate = key
@@ -69,6 +75,9 @@ class Folder(urwid.ListBox):
         elif key in ("k", "up"):
             key_to_propagate = "up"
         return super().keypress(size, key_to_propagate)
+
+    def get_focused_item(self) -> Item:
+        return self.get_focus()[0] if self.body else None
 
 
 class BFM(TreeNavigationMixin, urwid.WidgetWrap):
@@ -113,17 +122,10 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w = Folder([Item(*args) for args in enumerate(self.scanpath(path))])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
-        urwid.connect_signal(w.body, "modified", self._update_preview)
+        urwid.connect_signal(w, "focus_changed", self._on_folder_focus_changed)
         return w
 
-    def _update_preview(self):
-        def get_focused_item():
-            w_folder = self._w_folder_placeholder.original_widget
-            if w_folder.body:
-                return w_folder.get_focus()[0]
-
-        # BBB: py3.8+ walrus operator
-        item = get_focused_item()
+    def _on_folder_focus_changed(self, item: Item):
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
@@ -159,8 +161,9 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-        self._w_folder_placeholder.original_widget = self._folders[new_path]
-        self._update_preview()
+        folder = self._folders[new_path]
+        self._w_folder_placeholder.original_widget = folder
+        self._on_folder_focus_changed(folder.get_focused_item())  # Trick
 
     def edit_file(self, path: str):
         from . import loop
