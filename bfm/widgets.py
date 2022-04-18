@@ -111,7 +111,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             if item.entry.is_dir(follow_symlinks=False):
                 command = 'tree -C -a -L 1 -F "{path}"'
             else:
-                command = 'cat "{path}"'
+                command = 'bat --color=always --style=numbers --line-range=:500 "{path}"'  # noqa:E501
             # TODO: catch errors
             text = subprocess.run(
                 command.format(path=path), shell=True, capture_output=True
