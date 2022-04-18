@@ -6,6 +6,7 @@ from subprocess import call
 import urwid
 
 from bfm.util import mydefaultdict
+from bfm.vendor.ansi_widget import ANSIWidget
 
 from .mixins import TreeNavigationMixin
 
@@ -108,18 +109,17 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                command = 'tree -a -L 1 -F "{path}"'
+                command = 'tree -C -a -L 1 -F "{path}"'
             else:
                 command = 'cat "{path}"'
             # TODO: catch errors
             text = subprocess.run(
                 command.format(path=path), shell=True, capture_output=True
-            ).stdout
+            ).stdout.decode()
         else:
             text = ""
 
-        w = urwid.Text(text)
-        w = urwid.Filler(w, valign="top")
+        w = ANSIWidget(text)
         self._w_preview_placeholder.original_widget = w
 
     def _on_item_selected(self, item: Item):
