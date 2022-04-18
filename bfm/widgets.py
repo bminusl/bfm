@@ -11,7 +11,6 @@ from .mixins import TreeNavigationMixin
 
 class Item(urwid.WidgetWrap):
     signals = ["selected"]
-    _selectable = True
 
     def __init__(self, number: int, entry: os.DirEntry):
         self.entry = entry
@@ -25,8 +24,12 @@ class Item(urwid.WidgetWrap):
             attr = "file"
         # attr = "unknown"
 
-        w = urwid.Text(text)
-        w._selectable = True
+        stats = str(entry.stat().st_size)
+
+        w_name = urwid.Text(text)
+        w_stats = urwid.Text(stats)
+        w = urwid.Columns([w_name, ("pack", w_stats)])
+        w._selectable = True  # XXX: which widget should be selectable?
         w = urwid.Padding(w, left=1, right=1)
         w = urwid.AttrMap(w, attr, focus_map="focus")
         super().__init__(w)
