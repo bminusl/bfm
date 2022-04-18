@@ -127,7 +127,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
                 folder.set_focus(i)
                 break
 
-    def create_folder(self, path: str):
+    def create_folder(self, path: str) -> Folder:
         w = Folder([Item(*args) for args in enumerate(self.scanpath(path))])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
