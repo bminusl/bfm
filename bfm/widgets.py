@@ -1,6 +1,10 @@
 import os
+import stat
 import subprocess
 import weakref
+from datetime import datetime
+from grp import getgrgid
+from pwd import getpwuid
 from subprocess import call
 
 import urwid
@@ -42,6 +46,17 @@ class Item(urwid.WidgetWrap):
             return
         return key
 
+    def meta(self):
+        stats = self.entry.stat()
+        mode = stat.filemode(stats.st_mode)
+        nlink = stats.st_nlink
+        user = getpwuid(stats.st_uid).pw_name
+        group = getgrgid(stats.st_gid).gr_name
+        mtime = datetime.utcfromtimestamp(stats.st_mtime).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        return " ".join(map(str, [mode, nlink, user, group, mtime]))
+
 
 class Folder(urwid.ListBox):
     def __init__(self, body):
@@ -77,7 +92,9 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             [w_folder_placeholder, w_preview_placeholder], dividechars=1
         )
 
-        w = urwid.Frame(w_body, w_header)
+        w_extra = urwid.Text("")
+
+        w = urwid.Frame(w_body, w_header, w_extra)
         w = urwid.Padding(w, left=1, right=1)
 
         # Cache Folder instances when navigating the tree to reuse them later
@@ -87,6 +104,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         self._w_command = weakref.proxy(w_command)
         self._w_folder_placeholder = weakref.proxy(w_folder_placeholder)
         self._w_preview_placeholder = weakref.proxy(w_preview_placeholder)
+        self._w_extra = weakref.proxy(w_extra)
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
@@ -116,6 +134,8 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             text = subprocess.run(
                 command.format(path=path), shell=True, capture_output=True
             ).stdout.decode()
+
+            self._w_extra.set_text(item.meta())
         else:
             text = ""
 
