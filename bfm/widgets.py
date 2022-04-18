@@ -1,4 +1,5 @@
 import os
+import subprocess
 import weakref
 from subprocess import call
 
@@ -70,7 +71,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         # [0]: https://gitter.im/urwid/community?at=5f90305cea6bfb0a9a4bd0ac
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
         w_folder_placeholder = urwid.WidgetPlaceholder(w_empty)
-        w_preview_placeholder = AlwaysFocusedWidgetPlaceholder(w_empty)
+        w_preview_placeholder = urwid.WidgetPlaceholder(w_empty)
         w_body = urwid.Columns(
             [w_folder_placeholder, w_preview_placeholder], dividechars=1
         )
@@ -102,28 +103,23 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             if w_folder.body:
                 return w_folder.get_focus()[0]
 
-        def preview_file(path):
-            # TODO: large files, etc
-            try:
-                with open(path) as f:
-                    text = f.read()
-            except Exception as e:
-                text = str(e)
-            w = urwid.Text(text)
-            w = urwid.Filler(w, valign="top")
-            return w
-
         # BBB: py3.8+ walrus operator
         item = get_focused_item()
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                w = self._folders[path]
+                command = 'tree -a -L 1 -F "{path}"'
             else:
-                w = preview_file(path)
+                command = 'cat "{path}"'
+            # TODO: catch errors
+            text = subprocess.run(
+                command.format(path=path), shell=True, capture_output=True
+            ).stdout
         else:
-            w = urwid.Text("")
-            w = urwid.Filler(w, valign="top")
+            text = ""
+
+        w = urwid.Text(text)
+        w = urwid.Filler(w, valign="top")
         self._w_preview_placeholder.original_widget = w
 
     def _on_item_selected(self, item: Item):
@@ -159,8 +155,3 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             self.ascend()
             return
         return super().keypress(size, key)
-
-
-class AlwaysFocusedWidgetPlaceholder(urwid.WidgetPlaceholder):
-    def render(self, size, focus=False):
-        return super().render(size, True)
