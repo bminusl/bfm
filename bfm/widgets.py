@@ -23,7 +23,7 @@ class Item(urwid.WidgetWrap):
 
         text = entry.name
         # TODO: handle symlinks
-        if self.entry.is_dir(follow_symlinks=False):
+        if self.entry.is_dir():
             attr = "folder"
             text += "/"
         else:
@@ -151,7 +151,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
     def _on_folder_focus_changed(self, item: Item):
         if item:
             path = item.entry.path
-            if item.entry.is_dir(follow_symlinks=False):
+            if item.entry.is_dir():
                 command = config.folder_preview
             else:
                 command = config.file_preview
@@ -168,7 +168,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         self._w_preview_placeholder.original_widget = w
 
     def _on_item_selected(self, item: Item):
-        if item.entry.is_dir(follow_symlinks=False):
+        if item.entry.is_dir():
             self.descend(item.entry.name)
         else:
             self.edit_file(item.entry.path)
