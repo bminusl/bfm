@@ -4,7 +4,7 @@ import sys
 import urwid
 
 from .palette import palette
-from .widgets import BFM
+from .widgets import BFMWidget
 
 
 def main():
@@ -18,6 +18,6 @@ def main():
         path = os.getcwd()
     global loop
     loop = urwid.MainLoop(
-        BFM(path), palette, unhandled_input=exit_on_q, handle_mouse=False
+        BFMWidget(path), palette, unhandled_input=exit_on_q, handle_mouse=False
     )
     loop.run()

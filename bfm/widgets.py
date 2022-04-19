@@ -15,7 +15,7 @@ from . import config
 from .mixins import TreeNavigationMixin
 
 
-class Item(urwid.WidgetWrap):
+class ItemWidget(urwid.WidgetWrap):
     signals = ["selected"]
 
     def __init__(self, number: int, entry: os.DirEntry):
@@ -58,14 +58,14 @@ class Item(urwid.WidgetWrap):
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
 
-class Folder(urwid.ListBox):
+class FolderWidget(urwid.ListBox):
     signals = ["focus_changed"]
 
     def __init__(self, items):
         super().__init__(urwid.SimpleListWalker(items))
         urwid.connect_signal(self.body, "modified", self._on_body_modified)
 
-    def get_focused_item(self) -> Item:
+    def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
 
     def keypress(self, size, key):
@@ -80,7 +80,7 @@ class Folder(urwid.ListBox):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
 
-class BFM(TreeNavigationMixin, urwid.WidgetWrap):
+class BFMWidget(TreeNavigationMixin, urwid.WidgetWrap):
     def __init__(self, path: str):
         w_path = urwid.Text("")
         w_command = urwid.Text("")
@@ -106,7 +106,8 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w = urwid.Frame(w_body, w_header, w_extra)
         w = urwid.Padding(w, left=1, right=1)
 
-        # Cache Folder instances when navigating the tree to reuse them later
+        # Cache FolderWidget instances when navigating the tree to reuse them
+        # later
         self._folders = mydefaultdict(lambda key: self.create_folder(key))
 
         self._w_path = weakref.proxy(w_path)
@@ -127,8 +128,10 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
                 folder.set_focus(i)
                 break
 
-    def create_folder(self, path: str) -> Folder:
-        w = Folder([Item(*args) for args in enumerate(self.scanpath(path))])
+    def create_folder(self, path: str) -> FolderWidget:
+        w = FolderWidget(
+            [ItemWidget(*args) for args in enumerate(self.scanpath(path))]
+        )
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
         urwid.connect_signal(w, "focus_changed", self._on_folder_focus_changed)
@@ -148,7 +151,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
             return
         return super().keypress(size, key)
 
-    def _on_folder_focus_changed(self, item: Item):
+    def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
             path = item.entry.path
             if item.entry.is_dir():
@@ -167,7 +170,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         w = ANSIWidget(text)
         self._w_preview_placeholder.original_widget = w
 
-    def _on_item_selected(self, item: Item):
+    def _on_item_selected(self, item: ItemWidget):
         if item.entry.is_dir():
             self.descend(item.entry.name)
         else:
