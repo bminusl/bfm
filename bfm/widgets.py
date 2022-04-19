@@ -5,13 +5,13 @@ import weakref
 from datetime import datetime
 from grp import getgrgid
 from pwd import getpwuid
-from subprocess import call
 
 import urwid
 
 from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
+from . import config
 from .mixins import TreeNavigationMixin
 
 
@@ -139,7 +139,7 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
 
         # see https://github.com/urwid/urwid/issues/302
         loop.screen.stop()
-        call(["vim", path])
+        subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
 
     def keypress(self, size, key):
@@ -152,9 +152,9 @@ class BFM(TreeNavigationMixin, urwid.WidgetWrap):
         if item:
             path = item.entry.path
             if item.entry.is_dir(follow_symlinks=False):
-                command = 'tree -C -a -L 1 -F "{path}"'
+                command = config.folder_preview
             else:
-                command = 'bat --color=always --style=numbers --line-range=:500 "{path}"'  # noqa:E501
+                command = config.file_preview
             # TODO: catch errors
             text = subprocess.run(
                 command.format(path=path), shell=True, capture_output=True
