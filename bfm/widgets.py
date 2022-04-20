@@ -80,6 +80,14 @@ class FolderWidget(urwid.ListBox):
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
+    # https://github.com/urwid/urwid/issues/305
+    def _keypress_max_left(self, *args, **kwargs):
+        super()._keypress_max_left(*args, **kwargs)
+
+    # https://github.com/urwid/urwid/issues/305
+    def _keypress_max_right(self, *args, **kwargs):
+        super()._keypress_max_right(*args, **kwargs)
+
 
 class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
     _command_map = ExtendedCommandMap(
@@ -152,6 +160,12 @@ class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
         loop.screen.stop()
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
+
+    def keypress(self, size, key):
+        key = super().keypress(size, key)
+        if key is None:
+            ExtendedCommandMap.keyqueue = ""
+        return key
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
