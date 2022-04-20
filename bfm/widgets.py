@@ -8,15 +8,23 @@ from pwd import getpwuid
 
 import urwid
 
+from bfm.keys import ExtendedCommandMap
 from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
 from . import config
+from .keys import CallableCommandsMixin
 from .mixins import TreeNavigationMixin
 
 
-class ItemWidget(urwid.WidgetWrap):
+class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
     signals = ["selected"]
+    _command_map = ExtendedCommandMap(
+        {
+            "l": lambda self: urwid.emit_signal(self, "selected", self),
+        },
+        aliases={"enter": "l", "right": "l"},
+    )
 
     def __init__(self, number: int, entry: os.DirEntry):
         self.entry = entry
@@ -40,12 +48,6 @@ class ItemWidget(urwid.WidgetWrap):
         w = urwid.AttrMap(w, attr, focus_map="focus")
         super().__init__(w)
 
-    def keypress(self, size, key):
-        if key in ("l", "enter", "right"):
-            urwid.emit_signal(self, "selected", self)
-            return
-        return key
-
     def meta(self):
         stats = self.entry.stat()
         mode = stat.filemode(stats.st_mode)
@@ -60,6 +62,13 @@ class ItemWidget(urwid.WidgetWrap):
 
 class FolderWidget(urwid.ListBox):
     signals = ["focus_changed"]
+    _command_map = ExtendedCommandMap(
+        {
+            "j": "cursor down",
+            "k": "cursor up",
+        },
+        aliases={"down": "j", "up": "k"},
+    )
 
     def __init__(self, items):
         super().__init__(urwid.SimpleListWalker(items))
@@ -68,19 +77,18 @@ class FolderWidget(urwid.ListBox):
     def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
 
-    def keypress(self, size, key):
-        key_to_propagate = key
-        if key in ("j", "down"):
-            key_to_propagate = "down"
-        elif key in ("k", "up"):
-            key_to_propagate = "up"
-        return super().keypress(size, key_to_propagate)
-
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
 
-class BFMWidget(TreeNavigationMixin, urwid.WidgetWrap):
+class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
+    _command_map = ExtendedCommandMap(
+        {
+            "h": lambda self: self.ascend(),
+        },
+        aliases={"backspace": "h", "left": "h"},
+    )
+
     def __init__(self, path: str):
         w_path = urwid.Text("")
         w_command = urwid.Text("")
@@ -144,12 +152,6 @@ class BFMWidget(TreeNavigationMixin, urwid.WidgetWrap):
         loop.screen.stop()
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
-
-    def keypress(self, size, key):
-        if key in ("h", "backspace", "left"):
-            self.ascend()
-            return
-        return super().keypress(size, key)
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
