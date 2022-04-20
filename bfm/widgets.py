@@ -66,6 +66,8 @@ class FolderWidget(urwid.ListBox):
         {
             "j": "cursor down",
             "k": "cursor up",
+            "gg": "cursor max left",
+            "G": "cursor max right",
         },
         aliases={"down": "j", "up": "k"},
     )
