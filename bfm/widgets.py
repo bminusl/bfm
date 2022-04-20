@@ -108,7 +108,7 @@ class BFMWidget(TreeNavigationMixin, urwid.WidgetWrap):
 
         # Cache FolderWidget instances when navigating the tree to reuse them
         # later
-        self._folders = mydefaultdict(lambda key: self.create_folder(key))
+        self._folders = mydefaultdict(self.create_folder)
 
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
