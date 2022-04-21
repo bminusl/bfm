@@ -117,10 +117,10 @@ class CommandWidget(urwid.Edit):
 
     def keypress(self, size, key):
         if key == "enter":
-            text = self.text
+            edit_text = self.get_edit_text()
             self.set_caption("")
             self.set_edit_text("")
-            urwid.emit_signal(self, "validated", text)
+            urwid.emit_signal(self, "validated", edit_text)
         else:
             # Mark every key as handled, i.e. always return None.
             # This way, it is not propagated to other widgets.
