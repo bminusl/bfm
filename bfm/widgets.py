@@ -219,6 +219,11 @@ class BFMWidget(
     def _on_command_validated(self, text):
         self._w_frame.focus_body()
 
+        if text.startswith("!"):
+            subprocess.call(
+                text[1:], shell=True, cwd=self._TreeNavigationMixin__path
+            )
+
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
             path = item.entry.path
