@@ -176,9 +176,15 @@ class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
 
     def keypress(self, size, key):
         key = super().keypress(size, key)
-        # XXX: find another place to do this
+
+        # If the following condition is True, this means that the key was
+        # handled in a way or another, and the input_state queue can thus be
+        # cleared.
+        # We do this here because BFMWidget is the root widget.
+        # XXX/TODO: find a better place to do this
         if key is None:
             input_state.clear()
+
         return key
 
     def _on_folder_focus_changed(self, item: ItemWidget):
