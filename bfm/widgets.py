@@ -3,6 +3,7 @@ import stat
 import subprocess
 import weakref
 from datetime import datetime
+from functools import partial
 from grp import getgrgid
 from pwd import getpwuid
 
@@ -102,6 +103,34 @@ class FolderWidget(urwid.ListBox):
         super()._keypress_max_right(*args, **kwargs)
 
 
+class FocusableFrameWidget(urwid.Pile):
+    def __init__(self, header, body, footer):
+        super().__init__([("pack", header), body, ("pack", footer)])
+        self.focus_header = partial(self.set_focus, 0)
+        self.focus_body = partial(self.set_focus, 1)
+        self.focus_footer = partial(self.set_focus, 2)
+        self.focus_body()
+
+
+class CommandWidget(urwid.Edit):
+    signals = ["validated"]
+
+    def keypress(self, size, key):
+        if key == "enter":
+            text = self.text
+            self.set_caption("")
+            self.set_edit_text("")
+            urwid.emit_signal(self, "validated", text)
+        else:
+            # Mark every key as handled, i.e. always return None.
+            # This way, it is not propagated to other widgets.
+            super().keypress(size, key)
+
+    def reset(self):
+        self.set_caption(":")
+        self.set_edit_text("")
+
+
 class BFMWidget(
     ClearInputStateMixin,
     CallableCommandsMixin,
@@ -111,13 +140,14 @@ class BFMWidget(
     _command_map = ExtendedCommandMap(
         {
             "h": lambda self: self.ascend(),
+            ":": lambda self: self._on_command_edit(),
         },
         aliases={"<backspace>": "h", "<left>": "h"},
     )
 
     def __init__(self, path: str):
         w_path = urwid.Text("")
-        w_command = urwid.Text("")
+        w_command = CommandWidget()
         w_header = urwid.Pile([w_path, w_command])
 
         # IMPORTANT:
@@ -137,8 +167,8 @@ class BFMWidget(
 
         w_extra = urwid.Text("")
 
-        w = urwid.Frame(w_body, w_header, w_extra)
-        w = urwid.Padding(w, left=1, right=1)
+        w_frame = FocusableFrameWidget(w_header, w_body, w_extra)
+        w = urwid.Padding(w_frame, left=1, right=1)
 
         # Cache FolderWidget instances when navigating the tree to reuse them
         # later
@@ -149,6 +179,9 @@ class BFMWidget(
         self._w_folder_placeholder = weakref.proxy(w_folder_placeholder)
         self._w_preview_placeholder = weakref.proxy(w_preview_placeholder)
         self._w_extra = weakref.proxy(w_extra)
+        self._w_frame = weakref.proxy(w_frame)
+
+        urwid.connect_signal(w_command, "validated", self._on_command_validated)
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
@@ -178,6 +211,13 @@ class BFMWidget(
         loop.screen.stop()
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
+
+    def _on_command_edit(self):
+        self._w_frame.focus_header()
+        self._w_command.reset()
+
+    def _on_command_validated(self, text):
+        self._w_frame.focus_body()
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
