@@ -48,7 +48,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         w = urwid.AttrMap(w, attr, focus_map="focus")
         super().__init__(w)
 
-    def meta(self):
+    def meta(self) -> str:
         stats = self.entry.stat()
         mode = stat.filemode(stats.st_mode)
         nlink = stats.st_nlink
