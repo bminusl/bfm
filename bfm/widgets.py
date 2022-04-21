@@ -79,6 +79,17 @@ class FolderWidget(urwid.ListBox):
     def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
 
+    def keypress(self, size, key):
+        key = super().keypress(size, key)
+
+        # When pressing `j` at the bottom most item, or `k` a the top most one,
+        # the default behaviour is to mark them as unhandled. We modify this
+        # behaviour and always mark "j" and "k" as handled.
+        if key in ["j", "k"]:
+            return
+
+        return key
+
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
