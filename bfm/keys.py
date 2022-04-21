@@ -13,6 +13,11 @@ def unhandled_input(key):
         input_state.clear()
     else:
         input_state.push(key)
+        if not any(
+            keys.startswith(str(input_state))
+            for keys in ExtendedCommandMap.all_command_keys
+        ):
+            input_state.clear()
 
 
 class InputState:
@@ -39,9 +44,13 @@ input_state = InputState()
 
 
 class ExtendedCommandMap(CommandMap):
+    all_command_keys = []
+
     def __init__(self, command_defaults={}, aliases={}):
         self._command_defaults = command_defaults
         self._aliases = aliases
+        ExtendedCommandMap.all_command_keys.extend(command_defaults.keys())
+        ExtendedCommandMap.all_command_keys.extend(aliases.keys())
         super().__init__()
 
     def __getitem__(self, key):
