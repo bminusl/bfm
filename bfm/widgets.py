@@ -13,8 +13,8 @@ from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
 from . import config
+from .fs import TreeNavigationMixin
 from .keys import CallableCommandsMixin, ClearInputStateMixin
-from .mixins import TreeNavigationMixin
 
 
 class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
