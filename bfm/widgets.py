@@ -23,7 +23,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
         },
-        aliases={"enter": "l", "right": "l"},
+        aliases={"<enter>": "l", "<right>": "l"},
     )
 
     def __init__(self, number: int, entry: os.DirEntry):
@@ -69,7 +69,7 @@ class FolderWidget(urwid.ListBox):
             "gg": "cursor max left",
             "G": "cursor max right",
         },
-        aliases={"down": "j", "up": "k"},
+        aliases={"<down>": "j", "<up>": "k"},
     )
 
     def __init__(self, items):
@@ -112,7 +112,7 @@ class BFMWidget(
         {
             "h": lambda self: self.ascend(),
         },
-        aliases={"backspace": "h", "left": "h"},
+        aliases={"<backspace>": "h", "<left>": "h"},
     )
 
     def __init__(self, path: str):

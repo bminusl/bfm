@@ -6,6 +6,15 @@ from urwid.command_map import CommandMap
 urwid.command_map._command.clear()
 
 
+def escape(key):
+    # TODO: handle meta, ctrl, etc
+    if key == "<":
+        return r"\<"
+    elif key == ">":
+        return r"\>"
+    return key if len(key) == 1 else ("<%s>" % key)
+
+
 def unhandled_input(key):
     if key == "q":
         raise ExitMainLoop
@@ -26,7 +35,7 @@ class InputState:
         self._alarm_handle = None
 
     def __str__(self):
-        return "".join(self._queue)
+        return "".join(map(escape, self._queue))
 
     def clear(self):
         self._queue.clear()
@@ -35,7 +44,6 @@ class InputState:
         from . import loop
 
         loop.remove_alarm(self._alarm_handle)
-        # TODO: handle non alphabetical keys differently, e.g. <Tab>, <Space>
         self._queue.append(key)
         self._alarm_handle = loop.set_alarm_in(1, lambda *_: self.clear())
 
@@ -65,7 +73,7 @@ class ExtendedCommandMap(CommandMap):
         super().__init__()
 
     def __getitem__(self, key):
-        keys = str(input_state) + key
+        keys = str(input_state) + escape(key)
         keys = self._aliases.get(keys, keys)
         return self._command.get(keys, None)
 
