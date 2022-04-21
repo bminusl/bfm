@@ -165,8 +165,9 @@ class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
 
     def keypress(self, size, key):
         key = super().keypress(size, key)
+        # XXX: find another place to do this
         if key is None:
-            ExtendedCommandMap.keyqueue = ""
+            ExtendedCommandMap.input_state.clear()
         return key
 
     def _on_folder_focus_changed(self, item: ItemWidget):

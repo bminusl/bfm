@@ -10,15 +10,28 @@ def unhandled_input(key):
     if key == "q":
         raise ExitMainLoop
     elif key == "esc":
-        ExtendedCommandMap.keyqueue = ""
+        ExtendedCommandMap.input_state.clear()
     else:
+        ExtendedCommandMap.input_state.push(key)
+
+
+class InputState:
+    def __init__(self):
+        self._queue = []
+
+    def __str__(self):
+        return "".join(self._queue)
+
+    def clear(self):
+        self._queue.clear()
+
+    def push(self, key: str):
         # TODO: handle non alphabetical keys differently, e.g. <Tab>, <Space>
-        ExtendedCommandMap.keyqueue += key
+        self._queue.append(key)
 
 
 class ExtendedCommandMap(CommandMap):
-    # Cache unhandled keys to handle multiple-keys bindings
-    keyqueue = ""
+    input_state = InputState()
 
     def __init__(self, command_defaults={}, aliases={}):
         self._command_defaults = command_defaults
@@ -26,9 +39,9 @@ class ExtendedCommandMap(CommandMap):
         super().__init__()
 
     def __getitem__(self, key):
-        key = ExtendedCommandMap.keyqueue + key
-        key = self._aliases.get(key, key)
-        return self._command.get(key, None)
+        keys = str(ExtendedCommandMap.input_state) + key
+        keys = self._aliases.get(keys, keys)
+        return self._command.get(keys, None)
 
 
 class CallableCommandsMixin:
