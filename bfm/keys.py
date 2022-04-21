@@ -18,6 +18,7 @@ def unhandled_input(key):
 class InputState:
     def __init__(self):
         self._queue = []
+        self._alarm_handle = None
 
     def __str__(self):
         return "".join(self._queue)
@@ -26,8 +27,12 @@ class InputState:
         self._queue.clear()
 
     def push(self, key: str):
+        from . import loop
+
+        loop.remove_alarm(self._alarm_handle)
         # TODO: handle non alphabetical keys differently, e.g. <Tab>, <Space>
         self._queue.append(key)
+        self._alarm_handle = loop.set_alarm_in(1, lambda *_: self.clear())
 
 
 class ExtendedCommandMap(CommandMap):
