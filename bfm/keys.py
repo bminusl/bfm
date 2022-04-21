@@ -43,6 +43,17 @@ class InputState:
 input_state = InputState()
 
 
+class ClearInputStateMixin:
+    def keypress(self, size, key):
+        key = super().keypress(size, key)
+        # If the following condition is True, this means that the key was
+        # handled in a way or another, and the input_state queue can thus be
+        # cleared.
+        if key is None:
+            input_state.clear()
+        return key
+
+
 class ExtendedCommandMap(CommandMap):
     all_command_keys = []
 

@@ -8,12 +8,12 @@ from pwd import getpwuid
 
 import urwid
 
-from bfm.keys import ExtendedCommandMap, input_state
+from bfm.keys import ExtendedCommandMap
 from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
 from . import config
-from .keys import CallableCommandsMixin
+from .keys import CallableCommandsMixin, ClearInputStateMixin
 from .mixins import TreeNavigationMixin
 
 
@@ -102,7 +102,12 @@ class FolderWidget(urwid.ListBox):
         super()._keypress_max_right(*args, **kwargs)
 
 
-class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
+class BFMWidget(
+    ClearInputStateMixin,
+    CallableCommandsMixin,
+    TreeNavigationMixin,
+    urwid.WidgetWrap,
+):
     _command_map = ExtendedCommandMap(
         {
             "h": lambda self: self.ascend(),
@@ -173,19 +178,6 @@ class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
         loop.screen.stop()
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
-
-    def keypress(self, size, key):
-        key = super().keypress(size, key)
-
-        # If the following condition is True, this means that the key was
-        # handled in a way or another, and the input_state queue can thus be
-        # cleared.
-        # We do this here because BFMWidget is the root widget.
-        # XXX/TODO: find a better place to do this
-        if key is None:
-            input_state.clear()
-
-        return key
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
