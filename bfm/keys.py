@@ -10,9 +10,9 @@ def unhandled_input(key):
     if key == "q":
         raise ExitMainLoop
     elif key == "esc":
-        ExtendedCommandMap.input_state.clear()
+        input_state.clear()
     else:
-        ExtendedCommandMap.input_state.push(key)
+        input_state.push(key)
 
 
 class InputState:
@@ -35,16 +35,17 @@ class InputState:
         self._alarm_handle = loop.set_alarm_in(1, lambda *_: self.clear())
 
 
-class ExtendedCommandMap(CommandMap):
-    input_state = InputState()
+input_state = InputState()
 
+
+class ExtendedCommandMap(CommandMap):
     def __init__(self, command_defaults={}, aliases={}):
         self._command_defaults = command_defaults
         self._aliases = aliases
         super().__init__()
 
     def __getitem__(self, key):
-        keys = str(ExtendedCommandMap.input_state) + key
+        keys = str(input_state) + key
         keys = self._aliases.get(keys, keys)
         return self._command.get(keys, None)
 

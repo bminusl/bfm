@@ -8,7 +8,7 @@ from pwd import getpwuid
 
 import urwid
 
-from bfm.keys import ExtendedCommandMap
+from bfm.keys import ExtendedCommandMap, input_state
 from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
@@ -167,7 +167,7 @@ class BFMWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.WidgetWrap):
         key = super().keypress(size, key)
         # XXX: find another place to do this
         if key is None:
-            ExtendedCommandMap.input_state.clear()
+            input_state.clear()
         return key
 
     def _on_folder_focus_changed(self, item: ItemWidget):
