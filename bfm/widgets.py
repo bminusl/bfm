@@ -31,15 +31,18 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         self.entry = entry
 
         text = entry.name
-        # TODO: handle symlinks
-        if self.entry.is_dir():
+        stats = str(entry.stat(follow_symlinks=False).st_size)
+        if self.entry.is_symlink():
+            attr = "symlink"
+            stats = "-> {destination} {base}".format(
+                destination=os.readlink(entry.path), base=stats
+            )
+        elif self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
             text += "/"
         else:
             attr = "file"
         # attr = "unknown"
-
-        stats = str(entry.stat().st_size)
 
         w_name = urwid.Text(text)
         w_stats = urwid.Text(stats)
@@ -50,7 +53,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         super().__init__(w)
 
     def meta(self) -> str:
-        stats = self.entry.stat()
+        stats = self.entry.stat(follow_symlinks=False)
         mode = stat.filemode(stats.st_mode)
         nlink = stats.st_nlink
         user = getpwuid(stats.st_uid).pw_name
@@ -225,7 +228,7 @@ class BFMWidget(
     def _on_folder_focus_changed(self, item: ItemWidget):
         if item:
             path = item.entry.path
-            if item.entry.is_dir():
+            if item.entry.is_dir(follow_symlinks=False):
                 command = config.folder_preview
             else:
                 command = config.file_preview
@@ -242,7 +245,7 @@ class BFMWidget(
         self._w_preview_placeholder.original_widget = w
 
     def _on_item_selected(self, item: ItemWidget):
-        if item.entry.is_dir():
+        if item.entry.is_dir(follow_symlinks=False):
             self.descend(item.entry.name)
         else:
             self.edit_file(item.entry.path)

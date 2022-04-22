@@ -3,5 +3,5 @@ palette = [
     ("folder", "light cyan", "", ""),
     ("file", "", ""),
     ("focus", "standout", "", ""),
-    ("unknown", "", "light magenta"),
+    ("symlink", "light magenta", ""),
 ]
