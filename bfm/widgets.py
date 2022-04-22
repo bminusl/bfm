@@ -1,4 +1,5 @@
 import os
+import signal
 import stat
 import subprocess
 import weakref
@@ -236,8 +237,14 @@ class BFMWidget(
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         self._w_preview.clear()
+
         if hasattr(self, "_preview_proc"):
-            self._preview_proc.kill()
+            # [0]: Since `shell=True` is used in `subprocess.Popen(...)`, a
+            # simple call to `self._preview_proc.kill()` cannot be used. The
+            # process' children would not be killed and could still write to
+            # stdout.
+            # https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
+            os.killpg(os.getpgid(self._preview_proc.pid), signal.SIGTERM)
             del self._preview_proc
 
         if item:
@@ -253,6 +260,7 @@ class BFMWidget(
                 stdout=self._preview_pipe_fd,
                 stderr=subprocess.STDOUT,
                 close_fds=True,
+                preexec_fn=os.setsid,  # see [0]
             )
         else:
             extra = ""
