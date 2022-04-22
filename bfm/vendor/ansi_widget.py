@@ -89,12 +89,3 @@ class ANSIWidget(urwid.Widget):
         canvas = ANSICanvas(size, self.text.split("\n"))
 
         return canvas
-
-
-if __name__ == '__main__':
-    txt = '\x1b[34;47mHello World\x1b[0m'
-
-    urwid.MainLoop(urwid.Pile([
-        urwid.Filler(urwid.Text(f'TextWidget: {txt}')),
-        ANSIWidget(f'ANSIWidget: {txt}'),
-    ])).run()
