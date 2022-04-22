@@ -163,10 +163,8 @@ class BFMWidget(
         # [0]: https://gitter.im/urwid/community?at=5f90305cea6bfb0a9a4bd0ac
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
         w_folder_placeholder = urwid.WidgetPlaceholder(w_empty)
-        w_preview_placeholder = urwid.WidgetPlaceholder(w_empty)
-        w_body = urwid.Columns(
-            [w_folder_placeholder, w_preview_placeholder], dividechars=1
-        )
+        w_preview = ANSIWidget("")
+        w_body = urwid.Columns([w_folder_placeholder, w_preview], dividechars=1)
 
         w_extra = urwid.Text("")
 
@@ -180,9 +178,13 @@ class BFMWidget(
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
         self._w_folder_placeholder = weakref.proxy(w_folder_placeholder)
-        self._w_preview_placeholder = weakref.proxy(w_preview_placeholder)
+        self._w_preview = weakref.proxy(w_preview)
         self._w_extra = weakref.proxy(w_extra)
         self._w_frame = weakref.proxy(w_frame)
+
+        from . import loop
+
+        self._preview_pipe_fd = loop.watch_pipe(self._add_to_preview)
 
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
 
@@ -213,6 +215,13 @@ class BFMWidget(
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
 
+    def _add_to_preview(self, data):
+        try:
+            text = data.decode()
+        except UnicodeDecodeError as e:
+            text = str(e)
+        self._w_preview.append(text)
+
     def _on_command_edit(self):
         self._w_frame.focus_header()
         self._w_command.reset()
@@ -226,23 +235,29 @@ class BFMWidget(
             )
 
     def _on_folder_focus_changed(self, item: ItemWidget):
+        self._w_preview.clear()
+        if hasattr(self, "_preview_proc"):
+            self._preview_proc.kill()
+            del self._preview_proc
+
         if item:
-            path = item.entry.path
+            extra = item.meta()
+
             if item.entry.is_dir(follow_symlinks=False):
                 command = config.folder_preview
             else:
                 command = config.file_preview
-            # TODO: catch errors
-            text = subprocess.run(
-                command.format(path=path), shell=True, capture_output=True
-            ).stdout.decode()
-
-            self._w_extra.set_text(item.meta())
+            self._preview_proc = subprocess.Popen(
+                command.format(path=item.entry.path),
+                shell=True,
+                stdout=self._preview_pipe_fd,
+                stderr=subprocess.STDOUT,
+                close_fds=True,
+            )
         else:
-            text = ""
+            extra = ""
 
-        w = ANSIWidget(text)
-        self._w_preview_placeholder.original_widget = w
+        self._w_extra.set_text(extra)
 
     def _on_item_selected(self, item: ItemWidget):
         if item.entry.is_dir(follow_symlinks=False):

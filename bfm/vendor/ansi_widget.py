@@ -72,17 +72,21 @@ class ANSIWidget(urwid.Widget):
     _sizing = frozenset([urwid.widget.BOX])
 
     def __init__(self, text: str = '') -> None:
-        self.lines = text.split('\n')
+        self.text = text
 
-    def set_content(self, lines: List[str]) -> None:
-        self.lines = lines
+    def append(self, text: str = '') -> None:
+        self.text += text
+        self._invalidate()
+
+    def clear(self) -> None:
+        self.text = ""
         self._invalidate()
 
     def render(
         self,
         size: Tuple[int, int], focus: bool = False
     ) -> urwid.canvas.Canvas:
-        canvas = ANSICanvas(size, self.lines)
+        canvas = ANSICanvas(size, self.text.split("\n"))
 
         return canvas
 
