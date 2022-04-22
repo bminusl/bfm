@@ -278,6 +278,6 @@ class BFMWidget(
         if new_path in self._folders:
             folder = self._folders[new_path]
         else:
-            folder = self.create_folder(new_path)
+            self._folders[new_path] = folder = self.create_folder(new_path)
         self._w_folder_placeholder.original_widget = folder
         self._on_folder_focus_changed(folder.get_focused_item())  # Trick
