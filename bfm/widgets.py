@@ -217,11 +217,7 @@ class BFMWidget(
         loop.screen.start()
 
     def _add_to_preview(self, data):
-        try:
-            text = data.decode()
-        except UnicodeDecodeError as e:
-            text = str(e)
-        self._w_preview.append(text)
+        self._w_preview.append(data.decode())
 
     def _on_command_edit(self):
         self._w_frame.focus_header()
