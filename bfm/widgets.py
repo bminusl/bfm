@@ -43,7 +43,6 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
             text += "/"
         else:
             attr = "file"
-        # attr = "unknown"
 
         w_name = urwid.Text(text)
         w_stats = urwid.Text(stats)
