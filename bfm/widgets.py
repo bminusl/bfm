@@ -200,6 +200,7 @@ class BFMWidget(
             if item.entry.name == from_:
                 folder.set_focus(i)
                 break
+        return from_
 
     def create_folder(self, path: str) -> FolderWidget:
         w = FolderWidget([ItemWidget(entry) for entry in self.scanpath(path)])
