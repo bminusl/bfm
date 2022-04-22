@@ -8,6 +8,7 @@ from grp import getgrgid
 from pwd import getpwuid
 
 import urwid
+from humanize import naturalsize
 
 from bfm.keys import ExtendedCommandMap
 from bfm.vendor.ansi_widget import ANSIWidget
@@ -30,7 +31,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         self.entry = entry
 
         text = entry.name
-        stats = str(entry.stat(follow_symlinks=False).st_size)
+        stats = naturalsize(entry.stat(follow_symlinks=False).st_size, gnu=True)
         if self.entry.is_symlink():
             attr = "symlink"
             stats = "-> {destination} {base}".format(
