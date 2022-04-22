@@ -25,21 +25,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-# fmt: off
-# flake8: noqa
-
+import re
 from typing import Any, Iterable, List, Optional, Tuple
 
 import urwid
 
+# https://thewebdev.info/2022/04/10/how-to-remove-the-ansi-escape-sequences-from-a-string-in-python-2/
+ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+
+
+# XXX: ugly name, ugly code
+def ansi_truncate_and_fill(string, width):
+    output = ""
+    total_len = 0
+
+    texts = ansi_escape.split(string)
+    codes = [""] + ansi_escape.findall(string)
+
+    for code, text in zip(codes, texts):
+        remaining = width - total_len
+        text = text[:remaining]
+        output += code + text
+        total_len += len(text)
+
+    padding = " " * max(0, width - total_len)
+
+    return output + padding
+
 
 class ANSICanvas(urwid.canvas.Canvas):
-    def __init__(self, size: Tuple[int, int], text_lines: List[str]) -> None:
+    def __init__(self, size: Tuple[int, int], text: str) -> None:
         super().__init__()
-
         self.maxcols, self.maxrows = size
-
-        self.text_lines = text_lines
+        self.text_lines = text.splitlines()
 
     def cols(self) -> int:
         return self.maxcols
@@ -49,32 +67,32 @@ class ANSICanvas(urwid.canvas.Canvas):
 
     def content(
         self,
-        trim_left: int = 0, trim_top: int = 0,
-        cols: Optional[int] = None, rows: Optional[int] = None,
-        attr_map: Optional[Any] = None
+        trim_left: int = 0,
+        trim_top: int = 0,
+        cols: Optional[int] = None,
+        rows: Optional[int] = None,
+        attr_map: Optional[Any] = None,
     ) -> Iterable[List[Tuple[None, str, bytes]]]:
         assert cols is not None
         assert rows is not None
 
-        for i in range(rows):
-            if i < len(self.text_lines):
-                text = self.text_lines[i].encode('utf-8')
-            else:
-                text = b''
+        lines = iter(self.text_lines)
 
-            padding = bytes().rjust(max(0, cols - len(text)))
-            line = [(None, 'U', text + padding)]
+        for _ in range(rows):
+            line = next(lines, "")
 
-            yield line
+            text = ansi_truncate_and_fill(line, width=cols)
+
+            yield [(None, "U", text.encode())]
 
 
 class ANSIWidget(urwid.Widget):
     _sizing = frozenset([urwid.widget.BOX])
 
-    def __init__(self, text: str = '') -> None:
+    def __init__(self, text: str = "") -> None:
         self.text = text
 
-    def append(self, text: str = '') -> None:
+    def append(self, text: str = "") -> None:
         self.text += text
         self._invalidate()
 
@@ -83,9 +101,6 @@ class ANSIWidget(urwid.Widget):
         self._invalidate()
 
     def render(
-        self,
-        size: Tuple[int, int], focus: bool = False
+        self, size: Tuple[int, int], focus: bool = False
     ) -> urwid.canvas.Canvas:
-        canvas = ANSICanvas(size, self.text.split("\n"))
-
-        return canvas
+        return ANSICanvas(size, self.text)
