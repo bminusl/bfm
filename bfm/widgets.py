@@ -164,7 +164,7 @@ class BFMWidget(
         # [0]: https://gitter.im/urwid/community?at=5f90305cea6bfb0a9a4bd0ac
         w_empty = urwid.Filler(urwid.SelectableIcon(""), valign="top")
         w_folder_placeholder = urwid.WidgetPlaceholder(w_empty)
-        w_preview = ANSIWidget("")
+        w_preview = ANSIWidget()
         w_body = urwid.Columns([w_folder_placeholder, w_preview], dividechars=1)
 
         w_extra = urwid.Text("")
@@ -217,11 +217,7 @@ class BFMWidget(
         loop.screen.start()
 
     def _add_to_preview(self, data):
-        try:
-            text = data.decode()
-        except UnicodeDecodeError as e:
-            text = str(e)
-        self._w_preview.append(text)
+        self._w_preview.append(data)
 
     def _on_command_edit(self):
         self._w_frame.focus_header()

@@ -31,16 +31,16 @@ from typing import Any, Iterable, List, Optional, Tuple
 import urwid
 
 # https://thewebdev.info/2022/04/10/how-to-remove-the-ansi-escape-sequences-from-a-string-in-python-2/
-ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+ansi_escape = re.compile(br"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
 
 
 # XXX: ugly name, ugly code
-def ansi_truncate_and_fill(string, width):
-    output = ""
+def ansi_truncate_and_fill(string: bytes, width: int):
+    output = b""
     total_len = 0
 
     texts = ansi_escape.split(string)
-    codes = [""] + ansi_escape.findall(string)
+    codes = [b""] + ansi_escape.findall(string)
 
     for code, text in zip(codes, texts):
         remaining = width - total_len
@@ -48,13 +48,13 @@ def ansi_truncate_and_fill(string, width):
         output += code + text
         total_len += len(text)
 
-    padding = " " * max(0, width - total_len)
+    padding = b" " * max(0, width - total_len)
 
     return output + padding
 
 
 class ANSICanvas(urwid.canvas.Canvas):
-    def __init__(self, size: Tuple[int, int], text: str) -> None:
+    def __init__(self, size: Tuple[int, int], text: bytes) -> None:
         super().__init__()
         self.maxcols, self.maxrows = size
         self.text_lines = text.splitlines()
@@ -79,25 +79,23 @@ class ANSICanvas(urwid.canvas.Canvas):
         lines = iter(self.text_lines)
 
         for _ in range(rows):
-            line = next(lines, "")
-
+            line = next(lines, b"")
             text = ansi_truncate_and_fill(line, width=cols)
-
-            yield [(None, "U", text.encode())]
+            yield [(None, "U", text)]
 
 
 class ANSIWidget(urwid.Widget):
     _sizing = frozenset([urwid.widget.BOX])
 
-    def __init__(self, text: str = "") -> None:
+    def __init__(self, text: bytes = b"") -> None:
         self.text = text
 
-    def append(self, text: str = "") -> None:
+    def append(self, text: bytes = b"") -> None:
         self.text += text
         self._invalidate()
 
     def clear(self) -> None:
-        self.text = ""
+        self.text = b""
         self._invalidate()
 
     def render(
