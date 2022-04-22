@@ -27,7 +27,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         aliases={"<enter>": "l", "<right>": "l"},
     )
 
-    def __init__(self, number: int, entry: os.DirEntry):
+    def __init__(self, entry: os.DirEntry):
         self.entry = entry
 
         text = entry.name
@@ -196,9 +196,7 @@ class BFMWidget(
                 break
 
     def create_folder(self, path: str) -> FolderWidget:
-        w = FolderWidget(
-            [ItemWidget(*args) for args in enumerate(self.scanpath(path))]
-        )
+        w = FolderWidget([ItemWidget(entry) for entry in self.scanpath(path)])
         for item in w.body:
             urwid.connect_signal(item, "selected", self._on_item_selected)
         urwid.connect_signal(w, "focus_changed", self._on_folder_focus_changed)
