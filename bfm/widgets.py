@@ -10,7 +10,6 @@ from pwd import getpwuid
 import urwid
 
 from bfm.keys import ExtendedCommandMap
-from bfm.util import mydefaultdict
 from bfm.vendor.ansi_widget import ANSIWidget
 
 from . import config
@@ -175,7 +174,7 @@ class BFMWidget(
 
         # Cache FolderWidget instances when navigating the tree to reuse them
         # later
-        self._folders = mydefaultdict(self.create_folder)
+        self._folders = {}
 
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
@@ -252,6 +251,9 @@ class BFMWidget(
 
     def _on_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-        folder = self._folders[new_path]
+        if new_path in self._folders:
+            folder = self._folders[new_path]
+        else:
+            folder = self.create_folder(new_path)
         self._w_folder_placeholder.original_widget = folder
         self._on_folder_focus_changed(folder.get_focused_item())  # Trick
