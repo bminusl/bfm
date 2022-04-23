@@ -31,16 +31,17 @@ from typing import Any, Iterable, List, Optional, Tuple
 import urwid
 
 # https://thewebdev.info/2022/04/10/how-to-remove-the-ansi-escape-sequences-from-a-string-in-python-2/
-ansi_escape = re.compile(br"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
 
 
 # XXX: ugly name, ugly code
 def ansi_truncate_and_fill(string: bytes, width: int):
-    output = b""
+    string = string.decode()
+    output = ""
     total_len = 0
 
     texts = ansi_escape.split(string)
-    codes = [b""] + ansi_escape.findall(string)
+    codes = [""] + ansi_escape.findall(string)
 
     for code, text in zip(codes, texts):
         remaining = width - total_len
@@ -48,9 +49,9 @@ def ansi_truncate_and_fill(string: bytes, width: int):
         output += code + text
         total_len += len(text)
 
-    padding = b" " * max(0, width - total_len)
+    padding = " " * max(0, width - total_len)
 
-    return output + padding
+    return (output + padding).encode()
 
 
 class ANSICanvas(urwid.canvas.Canvas):
