@@ -53,7 +53,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         w = urwid.AttrMap(w, attr, focus_map="focus")
         super().__init__(w)
 
-    def meta(self) -> str:
+    def metadata(self) -> str:
         stats = self.entry.stat(follow_symlinks=False)
         mode = stat.filemode(stats.st_mode)
         nlink = stats.st_nlink
@@ -224,7 +224,7 @@ class BFMWidget(
             del self._preview_proc
 
         if item:
-            extra = item.meta()
+            extra = item.metadata()
 
             if item.entry.is_dir(follow_symlinks=False):
                 command = config.folder_preview
