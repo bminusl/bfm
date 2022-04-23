@@ -67,26 +67,34 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
 
-class FolderWidget(urwid.ListBox):
-    signals = ["focus_changed"]
+class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
+    signals = ["focus_changed", "path_changed"]
     _command_map = ExtendedCommandMap(
         {
+            "h": lambda self: self.ascend(),
             "j": "cursor down",
             "k": "cursor up",
             "gg": "cursor max left",
             "G": "cursor max right",
         },
-        aliases={"<down>": "j", "<up>": "k"},
+        aliases={
+            "<backspace>": "h",
+            "<left>": "h",
+            "<down>": "j",
+            "<up>": "k",
+        },
     )
 
-    def __init__(self, items=[]):
-        super().__init__(urwid.SimpleListWalker(items))
+    def __init__(self):
+        urwid.ListBox.__init__(self, urwid.SimpleListWalker([]))
 
-        self.append = self.body.append
-        self.extend = self.body.extend
-        self.clear = self.body.clear
+    def edit_file(self, path: str):
+        from . import loop
 
-        urwid.connect_signal(self.body, "modified", self._on_body_modified)
+        # see https://github.com/urwid/urwid/issues/302
+        loop.screen.stop()
+        subprocess.call(config.editor.format(path=path), shell=True)
+        loop.screen.start()
 
     def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
@@ -104,6 +112,26 @@ class FolderWidget(urwid.ListBox):
 
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
+
+    def _on_item_selected(self, item: ItemWidget):
+        if item.entry.is_dir(follow_symlinks=False):
+            self.descend(item.entry.name)
+        else:
+            self.edit_file(item.entry.path)
+
+    def _on_path_changed(self, new_path: str):
+        signal_args = (self.body, "modified", self._on_body_modified)
+        urwid.disconnect_signal(*signal_args)
+
+        self.body.clear()
+        for entry in self.scanpath(new_path):
+            w_item = ItemWidget(entry)
+            self.body.append(w_item)
+            urwid.connect_signal(w_item, "selected", self._on_item_selected)
+
+        urwid.connect_signal(*signal_args)
+        if self.body:
+            self.set_focus(0)  # Trick to send signal
 
     # https://github.com/urwid/urwid/issues/305
     def _keypress_max_left(self, *args, **kwargs):
@@ -145,15 +173,12 @@ class CommandWidget(urwid.Edit):
 class BFMWidget(
     ClearInputStateMixin,
     CallableCommandsMixin,
-    TreeNavigationMixin,
     urwid.WidgetWrap,
 ):
     _command_map = ExtendedCommandMap(
         {
-            "h": lambda self: self.ascend(),
             ":": lambda self: self._on_command_edit(),
         },
-        aliases={"<backspace>": "h", "<left>": "h"},
     )
 
     def __init__(self, path: str):
@@ -173,7 +198,7 @@ class BFMWidget(
         # XXX: are weakrefs necessary?
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
-        self._w_folder = w_folder  # connect_signal cannot work with a weakref
+        self._w_folder = weakref.proxy(w_folder)
         self._w_preview = weakref.proxy(w_preview)
         self._w_extra = weakref.proxy(w_extra)
         self._w_frame = weakref.proxy(w_frame)
@@ -182,18 +207,15 @@ class BFMWidget(
 
         self._preview_pipe_fd = loop.watch_pipe(self._add_to_preview)
 
+        # fmt: off
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
+        urwid.connect_signal(w_folder, "focus_changed", self._on_folder_focus_changed)  # noqa: E501
+        urwid.connect_signal(w_folder, "path_changed", self._on_folder_path_changed)  # noqa: E501
+        # fmt: on
 
-        TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
 
-    def edit_file(self, path: str):
-        from . import loop
-
-        # see https://github.com/urwid/urwid/issues/302
-        loop.screen.stop()
-        subprocess.call(config.editor.format(path=path), shell=True)
-        loop.screen.start()
+        w_folder.change_path(path)
 
     def _add_to_preview(self, data):
         self._w_preview.append(data)
@@ -209,9 +231,7 @@ class BFMWidget(
             raise ExitMainLoop
 
         if text.startswith("!"):
-            subprocess.call(
-                text[1:], shell=True, cwd=self._TreeNavigationMixin__path
-            )
+            subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         self._w_preview.clear()
@@ -245,24 +265,6 @@ class BFMWidget(
 
         self._w_extra.set_text(extra)
 
-    def _on_item_selected(self, item: ItemWidget):
-        if item.entry.is_dir(follow_symlinks=False):
-            self.descend(item.entry.name)
-        else:
-            self.edit_file(item.entry.path)
-
-    def _on_path_changed(self, new_path: str):
-        folder = self._w_folder
-        signal_args = (folder, "focus_changed", self._on_folder_focus_changed)
-        urwid.disconnect_signal(*signal_args)
-
+    def _on_folder_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
-
-        folder.clear()
-        for entry in self.scanpath(new_path):
-            item = ItemWidget(entry)
-            folder.append(item)
-            urwid.connect_signal(item, "selected", self._on_item_selected)
-
-        urwid.connect_signal(*signal_args)
-        signal_args[2](folder.get_focused_item())  # Trick
+        self._w_preview.clear()

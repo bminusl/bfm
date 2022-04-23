@@ -1,23 +1,26 @@
 import os
 
+import urwid
+
 
 class TreeNavigationMixin:
-    def __init__(self, path: str):
-        self.__path = path
-        self._on_path_changed(self.__path)
-
     def ascend(self):
-        self.__path, from_ = os.path.split(self.__path)
-        self._on_path_changed(self.__path)
+        new_path, from_ = os.path.split(self.__path)
+        self.change_path(new_path)
         return from_
 
     def change_path(self, new_path: str):
         self.__path = new_path
         self._on_path_changed(self.__path)
+        # XXX: the child class needs to manually define this signal
+        urwid.emit_signal(self, "path_changed", new_path)
 
     def descend(self, into: str):
-        self.__path = os.path.join(self.__path, into)
-        self._on_path_changed(self.__path)
+        new_path = os.path.join(self.__path, into)
+        self.change_path(new_path)
+
+    def get_path(self):
+        return self.__path
 
     def scanpath(self, path=None):
         with os.scandir(path or self.__path) as it:
