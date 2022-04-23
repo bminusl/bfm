@@ -11,6 +11,10 @@ class TreeNavigationMixin:
         self._on_path_changed(self.__path)
         return from_
 
+    def change_path(self, new_path: str):
+        self.__path = new_path
+        self._on_path_changed(self.__path)
+
     def descend(self, into: str):
         self.__path = os.path.join(self.__path, into)
         self._on_path_changed(self.__path)
