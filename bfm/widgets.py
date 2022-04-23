@@ -76,6 +76,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             "k": "cursor up",
             "gg": "cursor max left",
             "G": "cursor max right",
+            "r": lambda self: self.refresh(),
         },
         aliases={
             "<backspace>": "h",
@@ -110,6 +111,20 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
 
         return key
 
+    def refresh(self):
+        signal_args = (self.body, "modified", self._on_body_modified)
+        urwid.disconnect_signal(*signal_args)
+
+        self.body.clear()
+        for entry in self.scanpath():
+            w_item = ItemWidget(entry)
+            self.body.append(w_item)
+            urwid.connect_signal(w_item, "selected", self._on_item_selected)
+
+        urwid.connect_signal(*signal_args)
+        if self.body:
+            self.set_focus(0)  # Trick to send signal
+
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
@@ -120,18 +135,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             self.edit_file(item.entry.path)
 
     def _on_path_changed(self, new_path: str):
-        signal_args = (self.body, "modified", self._on_body_modified)
-        urwid.disconnect_signal(*signal_args)
-
-        self.body.clear()
-        for entry in self.scanpath(new_path):
-            w_item = ItemWidget(entry)
-            self.body.append(w_item)
-            urwid.connect_signal(w_item, "selected", self._on_item_selected)
-
-        urwid.connect_signal(*signal_args)
-        if self.body:
-            self.set_focus(0)  # Trick to send signal
+        self.refresh()
 
     # https://github.com/urwid/urwid/issues/305
     def _keypress_max_left(self, *args, **kwargs):
@@ -229,6 +233,8 @@ class BFMWidget(
 
         if text.startswith("!"):
             subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
+
+        self._w_folder.refresh()
 
     def _on_folder_focus_changed(self, item: ItemWidget):
         self._w_preview.clear()
