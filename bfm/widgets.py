@@ -168,9 +168,10 @@ class BFMWidget(
         w_frame = FocusableFrameWidget(w_header, w_body, w_extra)
         w = urwid.Padding(w_frame, left=1, right=1)
 
+        # XXX: are weakrefs necessary?
         self._w_path = weakref.proxy(w_path)
         self._w_command = weakref.proxy(w_command)
-        self._w_folder = weakref.proxy(w_folder)
+        self._w_folder = w_folder  # connect_signal cannot work with a weakref
         self._w_preview = weakref.proxy(w_preview)
         self._w_extra = weakref.proxy(w_extra)
         self._w_frame = weakref.proxy(w_frame)
@@ -180,9 +181,6 @@ class BFMWidget(
         self._preview_pipe_fd = loop.watch_pipe(self._add_to_preview)
 
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
-        urwid.connect_signal(
-            w_folder, "focus_changed", self._on_folder_focus_changed
-        )
 
         TreeNavigationMixin.__init__(self, path)
         urwid.WidgetWrap.__init__(self, w)
@@ -253,6 +251,9 @@ class BFMWidget(
 
     def _on_path_changed(self, new_path: str):
         folder = self._w_folder
+        signal_args = (folder, "focus_changed", self._on_folder_focus_changed)
+        urwid.disconnect_signal(*signal_args)
+
         self._w_path.set_text(("path", new_path))
 
         folder.clear()
@@ -260,3 +261,6 @@ class BFMWidget(
             item = ItemWidget(entry)
             folder.append(item)
             urwid.connect_signal(item, "selected", self._on_item_selected)
+
+        urwid.connect_signal(*signal_args)
+        signal_args[2](folder.get_focused_item())  # Trick
