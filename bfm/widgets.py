@@ -10,6 +10,7 @@ from pwd import getpwuid
 
 import urwid
 from humanize import naturalsize
+from urwid import ExitMainLoop
 
 from bfm.keys import ExtendedCommandMap
 from bfm.vendor.ansi_widget import ANSIWidget
@@ -225,6 +226,9 @@ class BFMWidget(
 
     def _on_command_validated(self, text):
         self._w_frame.focus_body()
+
+        if text == "q":
+            raise ExitMainLoop
 
         if text.startswith("!"):
             subprocess.call(

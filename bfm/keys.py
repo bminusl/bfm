@@ -1,5 +1,4 @@
 import urwid
-from urwid import ExitMainLoop
 from urwid.command_map import CommandMap
 
 # Clear all widgets default command map
@@ -16,9 +15,7 @@ def escape(key):
 
 
 def unhandled_input(key):
-    if key == "q":
-        raise ExitMainLoop
-    elif key == "esc":
+    if key == "esc":
         input_state.clear()
     else:
         input_state.push(key)
