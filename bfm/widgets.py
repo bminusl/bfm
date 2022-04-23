@@ -205,7 +205,7 @@ class BFMWidget(
 
         from . import loop
 
-        self._preview_pipe_fd = loop.watch_pipe(self._add_to_preview)
+        self._preview_pipe_fd = loop.watch_pipe(self._w_preview.append)
 
         # fmt: off
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
@@ -216,9 +216,6 @@ class BFMWidget(
         urwid.WidgetWrap.__init__(self, w)
 
         w_folder.change_path(path)
-
-    def _add_to_preview(self, data):
-        self._w_preview.append(data)
 
     def _on_command_edit(self):
         self._w_frame.focus_header()
