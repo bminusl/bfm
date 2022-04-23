@@ -33,20 +33,22 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         self.entry = entry
 
         text = entry.name
-        stats = naturalsize(entry.stat(follow_symlinks=False).st_size, gnu=True)
+        meta = naturalsize(entry.stat(follow_symlinks=False).st_size, gnu=True)
         if self.entry.is_symlink():
             attr = "symlink"
-            stats = "-> {destination} {base}".format(
-                destination=os.readlink(entry.path), base=stats
+            meta = "-> {destination} {base}".format(
+                destination=os.readlink(entry.path), base=meta
             )
         elif self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
             text += "/"
         else:
             attr = "file"
+            if os.access(entry.path, os.X_OK):
+                text += "*"
 
         w_name = urwid.Text(text)
-        w_stats = urwid.Text(stats)
+        w_stats = urwid.Text(meta)
         w = urwid.Columns([w_name, ("pack", w_stats)])
         w._selectable = True  # XXX: which widget should be selectable?
         w = urwid.Padding(w, left=1, right=1)
