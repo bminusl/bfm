@@ -1,5 +1,7 @@
 # bryton's file manager - bfm
 
+![bfm](/home/bryton/workspace/projects/bfm/bfm.png)
+
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bfm)
 ![PyPI](https://img.shields.io/pypi/v/bfm)
 
