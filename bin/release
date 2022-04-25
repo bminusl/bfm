@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<EOF
+Usage: $(basename "${BASH_SOURCE[0]}") <version>
+
+Release a new version of the software.
+EOF
+  exit
+}
+
+[[ "$#" -lt 1 ]] && usage
+
+old_version=$(python setup.py --version 2>/dev/null)
+sed -i "s/version=\"$old_version\"/version=\"$1\"/g" setup.py
+git commit -am "Release $1"
+git tag "$1"
