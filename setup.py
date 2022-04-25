@@ -35,4 +35,5 @@ setuptools.setup(
         "humanize",
         "urwid",
     ],
+    entry_points={"console_scripts": {"bfm=bfm.__main__:main"}},
 )
