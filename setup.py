@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="bfm",
-    version="0.0.1",
+    version="0.0.2",
     author="Bryton Lacquement",
     author_email="contact@bminusl.xyz",
     description="Yet another Vim-inspired file manager for the console.",
