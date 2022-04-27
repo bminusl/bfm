@@ -231,6 +231,13 @@ class BFMWidget(
         if text == "q":
             raise ExitMainLoop
 
+        try:
+            lineno = int(text)
+            self._w_folder.set_focus(lineno)
+            return
+        except Exception:
+            pass
+
         if text.startswith("!"):
             subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
 
