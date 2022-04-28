@@ -20,6 +20,7 @@ def main():
         palette,
         unhandled_input=unhandled_input,
         handle_mouse=False,
+        pop_ups=True,
     )
     # BFMWidget needs access to the loop when `__init__`iated.
     loop.widget = BFMWidget(path)
