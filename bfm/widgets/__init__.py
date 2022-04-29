@@ -133,7 +133,7 @@ class BFMWidget(
         # TODO: conditionally refresh
         self._w_folder.refresh()
 
-    def _on_folder_focus_changed(self, item: ItemWidget):
+    def _on_folder_focus_changed(self, w_item: ItemWidget):
         self._w_preview.clear()
 
         if hasattr(self, "_preview_proc"):
@@ -145,15 +145,15 @@ class BFMWidget(
             os.killpg(os.getpgid(self._preview_proc.pid), signal.SIGTERM)
             del self._preview_proc
 
-        if item:
-            extra = item.extra_metadata()
+        if w_item:
+            extra = w_item.extra_metadata()
 
-            if item.entry.is_dir(follow_symlinks=False):
+            if os.path.isdir(w_item.path):
                 command = config.folder_preview
             else:
                 command = config.file_preview
             self._preview_proc = subprocess.Popen(
-                command.format(path=item.entry.path),
+                command.format(path=w_item.path),
                 shell=True,
                 stdout=self._preview_pipe_fd,
                 stderr=subprocess.STDOUT,
@@ -165,8 +165,8 @@ class BFMWidget(
 
         self._w_extra.set_text(extra)
 
-    def _on_folder_item_created(self, item: ItemWidget):
-        urwid.connect_signal(item, "popup", self.open_pop_up)
+    def _on_folder_item_created(self, w_item: ItemWidget):
+        urwid.connect_signal(w_item, "popup", self.open_pop_up)
 
     def _on_folder_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))

@@ -3,6 +3,16 @@ import os
 import urwid
 
 
+def pretty_name(path: str, basename: bool = True):
+    output = os.path.basename(path) if basename else path
+    if os.path.isdir(path):
+        output += "/"
+    elif os.access(path, os.X_OK):
+        # Mark executable files
+        output += "*"
+    return output
+
+
 class TreeNavigationMixin:
     def ascend(self):
         new_path, from_ = os.path.split(self.__path)
@@ -25,8 +35,8 @@ class TreeNavigationMixin:
     def scanpath(self, path=None):
         with os.scandir(path or self.__path) as it:
             for entry in sorted(it, key=self.__sorting_key):
-                yield entry
+                yield entry.path
 
     @staticmethod
     def __sorting_key(entry: os.DirEntry):
-        return (not entry.is_dir(follow_symlinks=False), entry.name.lower())
+        return (not os.path.isdir(entry.path), entry.name.lower())

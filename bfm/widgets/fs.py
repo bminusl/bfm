@@ -9,7 +9,7 @@ import urwid
 from humanize import naturalsize
 
 from bfm import config
-from bfm.fs import TreeNavigationMixin
+from bfm.fs import TreeNavigationMixin, pretty_name
 from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
 
 
@@ -23,31 +23,27 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         aliases={"<enter>": "l", "<right>": "l"},
     )
 
-    def __init__(self, entry: os.DirEntry):
-        self.entry = entry
+    def __init__(self, path: str):
+        self.path = path
         w = self.generate_widget()
         super().__init__(w)
 
     def generate_widget(self) -> urwid.Widget:
-        text = self.entry.name
-        meta = naturalsize(
-            self.entry.stat(follow_symlinks=False).st_size, gnu=True
+        metadata = naturalsize(
+            os.stat(self.path, follow_symlinks=False).st_size, gnu=True
         )
-        if self.entry.is_symlink():
+        if os.path.islink(self.path):
             attr = "symlink"
-            meta = "-> {destination} {base}".format(
-                destination=os.readlink(self.entry.path), base=meta
+            metadata = "-> {} {}".format(
+                pretty_name(os.readlink(self.path), basename=False), metadata
             )
-        elif self.entry.is_dir(follow_symlinks=False):
+        elif os.path.isdir(self.path):
             attr = "folder"
-            text += "/"
         else:
             attr = "file"
-            if os.access(self.entry.path, os.X_OK):
-                text += "*"
 
-        w_name = urwid.Text(text)
-        w_metadata = urwid.Text(meta)
+        w_name = urwid.Text(pretty_name(self.path))
+        w_metadata = urwid.Text(metadata)
         w = urwid.Columns([w_name, ("pack", w_metadata)])
         w._selectable = True  # XXX: which widget should be selectable?
         w = urwid.Padding(w, left=1, right=1)
@@ -55,7 +51,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         return w
 
     def extra_metadata(self) -> str:
-        stats = self.entry.stat(follow_symlinks=False)
+        stats = os.stat(self.path, follow_symlinks=False)
         mode = stat.filemode(stats.st_mode)
         nlink = stats.st_nlink
         user = getpwuid(stats.st_uid).pw_name
@@ -67,12 +63,12 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
 
     def move(self):
         title = "Move to"
-        text = self.entry.name
+        text = os.path.basename(self.path)
         callback = self._on_move_validated
         urwid.emit_signal(self, "popup", title, text, callback)
 
     def _on_move_validated(self, new_name: str):
-        src = self.entry.path
+        src = self.path
         dirname = os.path.dirname(src)
         dst = os.path.join(dirname, new_name)
         try:
@@ -81,16 +77,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
             # TODO:
             return
 
-        # Cringe
-        # TODO: Need to stop using DirEntry as self.entry
-        with os.scandir(dirname) as it:
-            for entry in it:
-                if entry.path == dst:
-                    self.entry = entry
-                    break
-            else:
-                raise RuntimeError()
-
+        self.path = dst
         self._w = self.generate_widget()  # XXX: is it ok to modify `self._w`?
 
 
@@ -143,8 +130,8 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         urwid.disconnect_signal(*signal_args)
 
         self.body.clear()
-        for entry in self.scanpath():
-            w_item = ItemWidget(entry)
+        for path in self.scanpath():
+            w_item = ItemWidget(path)
             self.body.append(w_item)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
             urwid.emit_signal(self, "item_created", w_item)
@@ -156,11 +143,11 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
 
-    def _on_item_selected(self, item: ItemWidget):
-        if item.entry.is_dir(follow_symlinks=False):
-            self.descend(item.entry.name)
+    def _on_item_selected(self, w_item: ItemWidget):
+        if os.path.isdir(w_item.path):
+            self.descend(os.path.basename(w_item.path))
         else:
-            self.edit_file(item.entry.path)
+            self.edit_file(w_item.path)
 
     def _on_path_changed(self, new_path: str):
         self.refresh()
