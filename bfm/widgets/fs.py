@@ -14,10 +14,11 @@ from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
 
 
 class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
-    signals = ["selected"]
+    signals = ["popup", "selected"]
     _command_map = ExtendedCommandMap(
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
+            "r": lambda self: self.rename(),
         },
         aliases={"<enter>": "l", "<right>": "l"},
     )
@@ -59,9 +60,13 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         )
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
+    def rename(self):
+        urwid.emit_signal(self, "popup", "Rename")
+        # TODO:
+
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
-    signals = ["focus_changed", "path_changed"]
+    signals = ["focus_changed", "item_created", "path_changed"]
     _command_map = ExtendedCommandMap(
         {
             "h": lambda self: self.ascend(),
@@ -113,6 +118,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             w_item = ItemWidget(entry)
             self.body.append(w_item)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
+            urwid.emit_signal(self, "item_created", w_item)
 
         urwid.connect_signal(*signal_args)
         if self.body:

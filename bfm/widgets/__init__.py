@@ -16,25 +16,20 @@ from bfm.vendor.ansi_widget import ANSIWidget
 
 from .fs import FolderWidget, ItemWidget
 from .layout import FocusableFrameWidget, LastRenderedSizeMixin
+from .misc import EditableMixin
 
 
-class CommandWidget(urwid.Edit):
-    signals = ["validated"]
+class PopUpEdit(EditableMixin, urwid.WidgetWrap):
+    def __init__(self, title: str):
+        self.w_edit = w = urwid.Edit()
+        w = urwid.Filler(w)
+        w = urwid.LineBox(w, title=title, title_align="left")
 
-    def keypress(self, size, key):
-        if key == "enter":
-            edit_text = self.get_edit_text()
-            self.set_caption("")
-            self.set_edit_text("")
-            urwid.emit_signal(self, "validated", edit_text)
-        else:
-            # Mark every key as handled, i.e. always return None.
-            # This way, it is not propagated to other widgets.
-            super().keypress(size, key)
+        urwid.WidgetWrap.__init__(self, w)
 
-    def reset(self):
-        self.set_caption(":")
-        self.set_edit_text("")
+
+class CommandWidget(EditableMixin, urwid.Edit):
+    pass
 
 
 class BFMWidget(
@@ -46,24 +41,26 @@ class BFMWidget(
     _command_map = ExtendedCommandMap(
         {
             ":": lambda self: self._on_command_edit(),
-            "o": lambda self: self.open_pop_up(),
         },
     )
 
-    def create_pop_up(self):
-        w = urwid.Text("test")
-        w = urwid.Filler(w)
-        w = urwid.LineBox(w, title="foo", title_align="left")
-        return w
+    # Patch to pass *args, **kwargs to `create_pop_up`
+    def open_pop_up(self, *args, **kwargs):
+        self._pop_up_widget = self.create_pop_up(*args, **kwargs)
+        self._invalidate()
+
+    def create_pop_up(self, title: str):
+        w_popup = PopUpEdit(title)
+        # TODO:
+        urwid.connect_signal(w_popup, "aborted", self.close_pop_up)
+        urwid.connect_signal(w_popup, "validated", lambda _: self.close_pop_up)
+        return w_popup
 
     def get_pop_up_parameters(self):
-        w, h = self._LastRenderedSizeMixin__size
-        return {
-            "left": w // 4,
-            "top": h // 4,
-            "overlay_width": w // 2,
-            "overlay_height": h // 2,
-        }
+        W, H = self._LastRenderedSizeMixin__size
+        w, h = 42, 3
+        x, y = W // 2 - w // 2, H // 2 - h // 2
+        return {"left": x, "top": y, "overlay_width": w, "overlay_height": h}
 
     def __init__(self, path: str):
         w_path = urwid.Text("")
@@ -92,8 +89,10 @@ class BFMWidget(
         self._preview_pipe_fd = loop.watch_pipe(self._w_preview.append)
 
         # fmt: off
+        urwid.connect_signal(w_command, "aborted", self._on_command_aborted)
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
         urwid.connect_signal(w_folder, "focus_changed", self._on_folder_focus_changed)  # noqa: E501
+        urwid.connect_signal(w_folder, "item_created", self._on_folder_item_created)  # noqa: E501
         urwid.connect_signal(w_folder, "path_changed", self._on_folder_path_changed)  # noqa: E501
         # fmt: on
 
@@ -103,9 +102,12 @@ class BFMWidget(
 
     def _on_command_edit(self):
         self._w_frame.focus_header()
-        self._w_command.reset()
+        self._w_command.set_caption(":")
 
-    def _on_command_validated(self, text):
+    def _on_command_aborted(self):
+        self._w_frame.focus_body()
+
+    def _on_command_validated(self, text: str):
         self._w_frame.focus_body()
 
         if text == "q":
@@ -121,6 +123,7 @@ class BFMWidget(
         if text.startswith("!"):
             subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
 
+        # TODO: conditionally refresh
         self._w_folder.refresh()
 
     def _on_folder_focus_changed(self, item: ItemWidget):
@@ -154,6 +157,9 @@ class BFMWidget(
             extra = ""
 
         self._w_extra.set_text(extra)
+
+    def _on_folder_item_created(self, item: ItemWidget):
+        urwid.connect_signal(item, "popup", self.open_pop_up)
 
     def _on_folder_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
