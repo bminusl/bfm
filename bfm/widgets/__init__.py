@@ -2,6 +2,7 @@ import os
 import signal
 import subprocess
 import weakref
+from typing import Callable
 
 import urwid
 from urwid import ExitMainLoop
@@ -20,8 +21,8 @@ from .misc import EditableMixin
 
 
 class PopUpEdit(EditableMixin, urwid.WidgetWrap):
-    def __init__(self, title: str):
-        self.w_edit = w = urwid.Edit()
+    def __init__(self, title: str, text: str):
+        self.w_edit = w = urwid.Edit(edit_text=text)
         w = urwid.Filler(w)
         w = urwid.LineBox(w, title=title, title_align="left")
 
@@ -49,11 +50,17 @@ class BFMWidget(
         self._pop_up_widget = self.create_pop_up(*args, **kwargs)
         self._invalidate()
 
-    def create_pop_up(self, title: str):
-        w_popup = PopUpEdit(title)
-        # TODO:
-        urwid.connect_signal(w_popup, "aborted", self.close_pop_up)
-        urwid.connect_signal(w_popup, "validated", lambda _: self.close_pop_up)
+    def create_pop_up(self, title: str, text: str, callback: Callable):
+        def on_popup_aborted():
+            self.close_pop_up()
+
+        def on_popup_validated(text: str):
+            self.close_pop_up()
+            callback(text)
+
+        w_popup = PopUpEdit(title, text)
+        urwid.connect_signal(w_popup, "aborted", on_popup_aborted)
+        urwid.connect_signal(w_popup, "validated", on_popup_validated)
         return w_popup
 
     def get_pop_up_parameters(self):

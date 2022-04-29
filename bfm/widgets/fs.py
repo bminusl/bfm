@@ -18,27 +18,32 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
     _command_map = ExtendedCommandMap(
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
-            "r": lambda self: self.rename(),
+            "m": lambda self: self.move(),
         },
         aliases={"<enter>": "l", "<right>": "l"},
     )
 
     def __init__(self, entry: os.DirEntry):
         self.entry = entry
+        w = self.generate_widget()
+        super().__init__(w)
 
-        text = entry.name
-        meta = naturalsize(entry.stat(follow_symlinks=False).st_size, gnu=True)
+    def generate_widget(self) -> urwid.Widget:
+        text = self.entry.name
+        meta = naturalsize(
+            self.entry.stat(follow_symlinks=False).st_size, gnu=True
+        )
         if self.entry.is_symlink():
             attr = "symlink"
             meta = "-> {destination} {base}".format(
-                destination=os.readlink(entry.path), base=meta
+                destination=os.readlink(self.entry.path), base=meta
             )
         elif self.entry.is_dir(follow_symlinks=False):
             attr = "folder"
             text += "/"
         else:
             attr = "file"
-            if os.access(entry.path, os.X_OK):
+            if os.access(self.entry.path, os.X_OK):
                 text += "*"
 
         w_name = urwid.Text(text)
@@ -47,7 +52,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         w._selectable = True  # XXX: which widget should be selectable?
         w = urwid.Padding(w, left=1, right=1)
         w = urwid.AttrMap(w, attr, focus_map="focus")
-        super().__init__(w)
+        return w
 
     def metadata(self) -> str:
         stats = self.entry.stat(follow_symlinks=False)
@@ -60,9 +65,33 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         )
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
-    def rename(self):
-        urwid.emit_signal(self, "popup", "Rename")
-        # TODO:
+    def move(self):
+        title = "Move to"
+        text = self.entry.name
+        callback = self._on_move_validated
+        urwid.emit_signal(self, "popup", title, text, callback)
+
+    def _on_move_validated(self, new_name: str):
+        src = self.entry.path
+        dirname = os.path.dirname(src)
+        dst = os.path.join(dirname, new_name)
+        try:
+            os.rename(src, dst)
+        except Exception:
+            # TODO:
+            return
+
+        # Cringe
+        # TODO: Need to stop using DirEntry as self.entry
+        with os.scandir(dirname) as it:
+            for entry in it:
+                if entry.path == dst:
+                    self.entry = entry
+                    break
+            else:
+                raise RuntimeError()
+
+        self._w = self.generate_widget()  # XXX: is it ok to modify `self._w`?
 
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
