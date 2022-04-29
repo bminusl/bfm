@@ -145,7 +145,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
 
     def _on_item_selected(self, w_item: ItemWidget):
         if os.path.isdir(w_item.path):
-            self.descend(os.path.basename(w_item.path))
+            self.change_path(w_item.path)
         else:
             self.edit_file(w_item.path)
 
