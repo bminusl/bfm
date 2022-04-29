@@ -72,17 +72,16 @@ class BFMWidget(
 
     def __init__(self, path: str):
         w_path = urwid.Text("")
-        w_command = CommandWidget()
-        w_header = urwid.Pile([w_path, w_command])
 
         w_folder = FolderWidget()
         w_preview = ANSIWidget()
         w_body = urwid.Columns([w_folder, w_preview], dividechars=1)
 
         w_extra = urwid.Text("")
+        w_command = CommandWidget()
+        w_footer = urwid.Pile([w_extra, w_command])
 
-        w_frame = FocusableFrameWidget(w_header, w_body, w_extra)
-        w = urwid.Padding(w_frame, left=1, right=1)
+        w_frame = FocusableFrameWidget(w_path, w_body, w_footer)
 
         # XXX: are weakrefs necessary?
         self._w_path = weakref.proxy(w_path)
@@ -104,12 +103,12 @@ class BFMWidget(
         urwid.connect_signal(w_folder, "path_changed", self._on_folder_path_changed)  # noqa: E501
         # fmt: on
 
-        urwid.PopUpLauncher.__init__(self, w)
+        urwid.PopUpLauncher.__init__(self, w_frame)
 
         w_folder.change_path(path)
 
     def _on_command_edit(self):
-        self._w_frame.focus_header()
+        self._w_frame.focus_footer()
         self._w_command.set_caption(":")
 
     def _on_command_aborted(self):
