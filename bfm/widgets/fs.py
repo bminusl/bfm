@@ -47,14 +47,14 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
                 text += "*"
 
         w_name = urwid.Text(text)
-        w_stats = urwid.Text(meta)
-        w = urwid.Columns([w_name, ("pack", w_stats)])
+        w_metadata = urwid.Text(meta)
+        w = urwid.Columns([w_name, ("pack", w_metadata)])
         w._selectable = True  # XXX: which widget should be selectable?
         w = urwid.Padding(w, left=1, right=1)
         w = urwid.AttrMap(w, attr, focus_map="focus")
         return w
 
-    def metadata(self) -> str:
+    def extra_metadata(self) -> str:
         stats = self.entry.stat(follow_symlinks=False)
         mode = stat.filemode(stats.st_mode)
         nlink = stats.st_nlink

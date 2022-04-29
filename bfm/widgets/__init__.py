@@ -147,7 +147,7 @@ class BFMWidget(
             del self._preview_proc
 
         if item:
-            extra = item.metadata()
+            extra = item.extra_metadata()
 
             if item.entry.is_dir(follow_symlinks=False):
                 command = config.folder_preview
