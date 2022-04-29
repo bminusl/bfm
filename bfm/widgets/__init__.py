@@ -25,6 +25,7 @@ class PopUpEdit(EditableMixin, urwid.WidgetWrap):
         self.w_edit = w = urwid.Edit(edit_text=text)
         w = urwid.Filler(w)
         w = urwid.LineBox(w, title=title, title_align="left")
+        w = urwid.AttrMap(w, "popup")
 
         urwid.WidgetWrap.__init__(self, w)
 

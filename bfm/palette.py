@@ -1,4 +1,5 @@
 palette = [
+    ("popup", "", "black", ""),
     ("path", "light cyan", "", "bold"),
     ("folder", "light cyan", "", ""),
     ("file", "", ""),
