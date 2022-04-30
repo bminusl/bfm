@@ -7,10 +7,13 @@ from pwd import getpwuid
 
 import urwid
 from humanize import naturalsize
+from send2trash import send2trash
 
 from bfm import config
 from bfm.fs import TreeNavigationMixin, pretty_name
 from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
+
+from .popup import EditPopUp
 
 
 class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
@@ -19,6 +22,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
             "m": lambda self: self.move(),
+            "dd": lambda self: self.delete(),
         },
         aliases={"<enter>": "l", "<right>": "l"},
     )
@@ -61,23 +65,28 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         )
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
+    def delete(self):
+        send2trash(self.path)
+        urwid.emit_signal(self, "require_refresh")
+
     def move(self):
+        def on_close(success: bool, text: str):
+            if not success:
+                return
+            src = self.path
+            dst = text
+            try:
+                os.renames(src, dst)
+            except Exception:
+                # TODO: display error
+                return
+            urwid.emit_signal(self, "require_refresh")
+
         from bfm import w_root
 
-        w_root.open_pop_up(
-            title="Move to", text=self.path, callback=self._on_move_validated
-        )
-
-    def _on_move_validated(self, new_name: str):
-        src = self.path
-        dst = new_name
-        try:
-            os.renames(src, dst)
-        except Exception:
-            # TODO: display error
-            return
-
-        urwid.emit_signal(self, "require_refresh")
+        w_pop_up = EditPopUp(title="Move to", text=self.path)
+        urwid.connect_signal(w_pop_up, "close", on_close)
+        w_root.open_pop_up(w_pop_up)
 
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):

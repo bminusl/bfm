@@ -33,6 +33,7 @@ setuptools.setup(
     python_requires=">=3.5",
     install_requires=[
         "humanize",
+        "send2trash",
         "urwid",
     ],
     entry_points={"console_scripts": {"bfm=bfm.__main__:main"}},

@@ -1,16 +1,15 @@
 import urwid
 
 
-class EditableMixin:
+class MyEdit(urwid.Edit):
     signals = ["aborted", "validated"]
 
     def keypress(self, size, key):
+        edit_text = self.get_edit_text()
         if key == "esc":
-            urwid.emit_signal(self, "aborted")
+            urwid.emit_signal(self, "aborted", edit_text)
             self.reset()
         elif key == "enter":
-            w_edit = getattr(self, "w_edit", self)
-            edit_text = w_edit.get_edit_text()
             urwid.emit_signal(self, "validated", edit_text)
             self.reset()
         else:
@@ -19,6 +18,5 @@ class EditableMixin:
             super().keypress(size, key)
 
     def reset(self):
-        w_edit = getattr(self, "w_edit", self)
-        w_edit.set_caption("")
-        w_edit.set_edit_text("")
+        self.set_caption("")
+        self.set_edit_text("")

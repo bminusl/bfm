@@ -2,7 +2,6 @@ import os
 import signal
 import subprocess
 import weakref
-from typing import Callable
 
 import urwid
 from urwid import ExitMainLoop
@@ -17,21 +16,7 @@ from bfm.vendor.ansi_widget import ANSIWidget
 
 from .fs import FolderWidget, ItemWidget
 from .layout import FocusableFrameWidget, LastRenderedSizeMixin
-from .misc import EditableMixin
-
-
-class PopUpEdit(EditableMixin, urwid.WidgetWrap):
-    def __init__(self, title: str, text: str):
-        self.w_edit = w = urwid.Edit(edit_text=text)
-        w = urwid.Filler(w)
-        w = urwid.LineBox(w, title=title, title_align="left")
-        w = urwid.AttrMap(w, "popup")
-
-        urwid.WidgetWrap.__init__(self, w)
-
-
-class CommandWidget(EditableMixin, urwid.Edit):
-    pass
+from .misc import MyEdit
 
 
 class RootWidget(
@@ -46,23 +31,12 @@ class RootWidget(
         },
     )
 
-    # Patch to pass *args, **kwargs to `create_pop_up`
-    def open_pop_up(self, *args, **kwargs):
-        self._pop_up_widget = self.create_pop_up(*args, **kwargs)
+    def open_pop_up(self, w_pop_up: urwid.Widget):
+        self._pop_up_widget = w_pop_up
+        urwid.connect_signal(
+            w_pop_up, "close", lambda *args, **kwargs: self.close_pop_up()
+        )
         self._invalidate()
-
-    def create_pop_up(self, title: str, text: str, callback: Callable):
-        def on_popup_aborted():
-            self.close_pop_up()
-
-        def on_popup_validated(text: str):
-            self.close_pop_up()
-            callback(text)
-
-        w_popup = PopUpEdit(title, text)
-        urwid.connect_signal(w_popup, "aborted", on_popup_aborted)
-        urwid.connect_signal(w_popup, "validated", on_popup_validated)
-        return w_popup
 
     def get_pop_up_parameters(self):
         W, H = self._LastRenderedSizeMixin__size
@@ -78,7 +52,7 @@ class RootWidget(
         w_body = urwid.Columns([w_folder, w_preview], dividechars=1)
 
         w_extra = urwid.Text("")
-        w_command = CommandWidget()
+        w_command = MyEdit()
         w_footer = urwid.Pile([w_extra, w_command])
 
         w_frame = FocusableFrameWidget(w_path, w_body, w_footer)
