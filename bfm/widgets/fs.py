@@ -14,7 +14,7 @@ from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
 
 
 class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
-    signals = ["popup", "require_refresh", "selected"]
+    signals = ["require_refresh", "selected"]
     _command_map = ExtendedCommandMap(
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
@@ -62,10 +62,11 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
     def move(self):
-        title = "Move to"
-        text = self.path
-        callback = self._on_move_validated
-        urwid.emit_signal(self, "popup", title, text, callback)
+        from bfm import w_root
+
+        w_root.open_pop_up(
+            title="Move to", text=self.path, callback=self._on_move_validated
+        )
 
     def _on_move_validated(self, new_name: str):
         src = self.path
@@ -80,7 +81,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
 
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
-    signals = ["focus_changed", "item_created", "path_changed"]
+    signals = ["focus_changed", "path_changed"]
     _command_map = ExtendedCommandMap(
         {
             "h": lambda self: self.ascend(),
@@ -133,7 +134,6 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             self.body.append(w_item)
             urwid.connect_signal(w_item, "require_refresh", self.refresh)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
-            urwid.emit_signal(self, "item_created", w_item)
 
         urwid.connect_signal(*signal_args)
         if self.body:

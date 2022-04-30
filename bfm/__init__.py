@@ -5,7 +5,7 @@ import urwid
 
 from .keys import unhandled_input
 from .palette import palette
-from .widgets import BFMWidget
+from .widgets import RootWidget
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
         path = os.path.abspath(os.path.expanduser(sys.argv[1]))
     except IndexError:
         path = os.getcwd()
-    global loop
+    global loop, w_root
     loop = urwid.MainLoop(
         None,
         palette,
@@ -23,5 +23,5 @@ def main():
         pop_ups=True,
     )
     # BFMWidget needs access to the loop when `__init__`iated.
-    loop.widget = BFMWidget(path)
+    loop.widget = w_root = RootWidget(path)
     loop.run()

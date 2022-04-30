@@ -34,7 +34,7 @@ class CommandWidget(EditableMixin, urwid.Edit):
     pass
 
 
-class BFMWidget(
+class RootWidget(
     ClearInputStateMixin,
     CallableCommandsMixin,
     LastRenderedSizeMixin,
@@ -99,7 +99,6 @@ class BFMWidget(
         urwid.connect_signal(w_command, "aborted", self._on_command_aborted)
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
         urwid.connect_signal(w_folder, "focus_changed", self._on_folder_focus_changed)  # noqa: E501
-        urwid.connect_signal(w_folder, "item_created", self._on_folder_item_created)  # noqa: E501
         urwid.connect_signal(w_folder, "path_changed", self._on_folder_path_changed)  # noqa: E501
         # fmt: on
 
@@ -164,9 +163,6 @@ class BFMWidget(
             extra = ""
 
         self._w_extra.set_text(extra)
-
-    def _on_folder_item_created(self, w_item: ItemWidget):
-        urwid.connect_signal(w_item, "popup", self.open_pop_up)
 
     def _on_folder_path_changed(self, new_path: str):
         self._w_path.set_text(("path", new_path))
