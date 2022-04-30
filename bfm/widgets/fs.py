@@ -14,7 +14,7 @@ from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
 
 
 class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
-    signals = ["popup", "selected"]
+    signals = ["popup", "require_refresh", "selected"]
     _command_map = ExtendedCommandMap(
         {
             "l": lambda self: urwid.emit_signal(self, "selected", self),
@@ -63,22 +63,20 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
 
     def move(self):
         title = "Move to"
-        text = os.path.basename(self.path)
+        text = self.path
         callback = self._on_move_validated
         urwid.emit_signal(self, "popup", title, text, callback)
 
     def _on_move_validated(self, new_name: str):
         src = self.path
-        dirname = os.path.dirname(src)
-        dst = os.path.join(dirname, new_name)
+        dst = new_name
         try:
-            os.rename(src, dst)
+            os.renames(src, dst)
         except Exception:
-            # TODO:
+            # TODO: display error
             return
 
-        self.path = dst
-        self._w = self.generate_widget()  # XXX: is it ok to modify `self._w`?
+        urwid.emit_signal(self, "require_refresh")
 
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
@@ -133,6 +131,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         for path in self.scanpath():
             w_item = ItemWidget(path)
             self.body.append(w_item)
+            urwid.connect_signal(w_item, "require_refresh", self.refresh)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
             urwid.emit_signal(self, "item_created", w_item)
 
