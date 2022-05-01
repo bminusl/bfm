@@ -80,6 +80,9 @@ class RootWidget(
 
         w_folder.change_path(path)
 
+    def error(self, message: str):
+        self._w_command.set_caption(("error", message))
+
     def _on_command_edit(self):
         self._w_frame.focus_footer()
         self._w_command.set_caption(":")
@@ -95,16 +98,19 @@ class RootWidget(
 
         try:
             lineno = int(text)
-            self._w_folder.set_focus(lineno)
-            return
         except Exception:
             pass
+        else:
+            self._w_folder.set_focus(lineno)
+            return
 
         if text.startswith("!"):
             subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
+            # TODO: conditionally refresh
+            self._w_folder.refresh()
+            return
 
-        # TODO: conditionally refresh
-        self._w_folder.refresh()
+        self.error("Not an editor command: {}".format(text))
 
     def _on_folder_focus_changed(self, w_item: ItemWidget):
         self._w_preview.clear()

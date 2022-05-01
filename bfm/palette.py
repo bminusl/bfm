@@ -5,4 +5,5 @@ palette = [
     ("file", "", ""),
     ("focus", "standout", "", ""),
     ("symlink", "light magenta", ""),
+    ("error", "black", "light red", "bold"),
 ]

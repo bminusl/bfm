@@ -7,11 +7,11 @@ class MyEdit(urwid.Edit):
     def keypress(self, size, key):
         edit_text = self.get_edit_text()
         if key == "esc":
+            self.reset()
             urwid.emit_signal(self, "aborted", edit_text)
-            self.reset()
         elif key == "enter":
-            urwid.emit_signal(self, "validated", edit_text)
             self.reset()
+            urwid.emit_signal(self, "validated", edit_text)
         else:
             # NB: Mark every key as handled, i.e. always return None.
             # This way, it is not propagated to other widgets.
