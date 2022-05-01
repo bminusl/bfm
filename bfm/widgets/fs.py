@@ -160,6 +160,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         loop.screen.stop()
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
+        self.refresh()
 
     def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
