@@ -8,8 +8,8 @@ from .misc import MyEdit
 class PopUpMixin:
     signals = ["close"]
 
-    def close(self, success, *args, **kwargs):
-        urwid.emit_signal(self, "close", success, *args, **kwargs)
+    def close(self, success, *args):
+        urwid.emit_signal(self, "close", success, *args)
 
 
 class EditPopUp(PopUpMixin, urwid.WidgetWrap):
