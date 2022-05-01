@@ -108,7 +108,9 @@ class RootWidget(
         except Exception:
             pass
         else:
-            self._w_folder.set_focus(lineno)
+            # XXX: we do not use self._w_folder.set_focus directly, because it
+            # seems to trigger the "modified" signal 3 times instead of once.
+            self._w_folder.body.set_focus(lineno)
             return
 
         if text.startswith("!"):

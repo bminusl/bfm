@@ -144,6 +144,15 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         TreeNavigationMixin.__init__(self)
         urwid.ListBox.__init__(self, urwid.SimpleListWalker([]))
 
+        self._focus_cache = {}
+        urwid.connect_signal(self, "focus_changed", self._on_focus_changed)
+
+    def ascend(self):
+        new_path, from_ = os.path.split(self.path)
+        self._focus_cache[new_path] = self.path
+        self.change_path(new_path)
+        return from_
+
     def edit_file(self, path: str):
         from bfm import loop
 
@@ -176,12 +185,33 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             self.body.append(w_item)
             urwid.connect_signal(w_item, "require_refresh", self.refresh)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
+
         urwid.connect_signal(*signal_args)
-        if self.body:
-            self.set_focus(0)  # Trick to send signal
+        self.focus_correct_item()
+
+    def focus_correct_item(self):
+        if not self.body:
+            return
+        target_path = self._focus_cache.get(self.path)
+        if target_path:
+            for i, w_item in enumerate(self.body):
+                if w_item.path == target_path:
+                    break
+            else:
+                i = 0
+                # TODO: display error message
+        else:
+            i = 0
+        # NB: (intended) side effect: self.body emits the "modified" signal
+        # XXX: we do not use self.set_focus directly, because it seems to
+        # trigger the "modified" signal 3 times instead of once.
+        self.body.set_focus(i)
 
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
+
+    def _on_focus_changed(self, w_item: ItemWidget):
+        self._focus_cache[self.path] = w_item.path
 
     def _on_item_selected(self, w_item: ItemWidget):
         if os.path.isdir(w_item.path):
