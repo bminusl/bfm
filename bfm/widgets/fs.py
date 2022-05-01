@@ -2,6 +2,7 @@ import os
 import stat
 import subprocess
 from datetime import datetime
+from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
 
@@ -27,11 +28,32 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         aliases={"<enter>": "l", "<right>": "l"},
     )
 
+    def _preverify_path(factory=lambda: None):
+        # ItemWidget can potentially represent an item that no longer exists
+        # (e.g. deleted by an external action in the meantime). This decorator
+        # can thus be used to check if `self.path` is still valid. If not, it
+        # returns `factory()`.
+        # XXX: This is probably not 100% error proof, but I think it is good
+        # enough.
+        def decorator(f):
+            @wraps(f)
+            def wrapper(self, *args, **kwargs):
+                # XXX: This won't detect broken symlinks on some platforms
+                if os.path.lexists(self.path):
+                    return f(self, *args, **kwargs)
+                else:
+                    return factory()
+
+            return wrapper
+
+        return decorator
+
     def __init__(self, path: str):
         self.path = path
         w = self.generate_widget()
         super().__init__(w)
 
+    # @_preverify_path()
     def generate_widget(self) -> urwid.Widget:
         metadata = naturalsize(
             os.stat(self.path, follow_symlinks=False).st_size, gnu=True
@@ -54,6 +76,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         w = urwid.AttrMap(w, attr, focus_map="focus")
         return w
 
+    @_preverify_path(factory=str)
     def extra_metadata(self) -> str:
         stats = os.stat(self.path, follow_symlinks=False)
         mode = stat.filemode(stats.st_mode)
@@ -65,10 +88,12 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         )
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
+    @_preverify_path()
     def delete(self):
         send2trash(self.path)
         urwid.emit_signal(self, "require_refresh")
 
+    @_preverify_path()
     def move(self):
         def on_close(success: bool, text: str):
             if not success:
