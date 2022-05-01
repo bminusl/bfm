@@ -87,7 +87,7 @@ class RootWidget(
         self._w_frame.focus_footer()
         self._w_command.set_caption(":")
 
-    def _on_command_aborted(self):
+    def _on_command_aborted(self, text: str):
         self._w_frame.focus_body()
 
     def _on_command_validated(self, text: str):
