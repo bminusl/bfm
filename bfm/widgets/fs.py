@@ -141,6 +141,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
     )
 
     def __init__(self):
+        TreeNavigationMixin.__init__(self)
         urwid.ListBox.__init__(self, urwid.SimpleListWalker([]))
 
     def edit_file(self, path: str):
@@ -175,7 +176,6 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             self.body.append(w_item)
             urwid.connect_signal(w_item, "require_refresh", self.refresh)
             urwid.connect_signal(w_item, "selected", self._on_item_selected)
-
         urwid.connect_signal(*signal_args)
         if self.body:
             self.set_focus(0)  # Trick to send signal
@@ -189,7 +189,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         else:
             self.edit_file(w_item.path)
 
-    def _on_path_changed(self, new_path: str):
+    def _on_path_changed(self, old_path: str, new_path: str):
         self.refresh()
 
     # https://github.com/urwid/urwid/issues/305

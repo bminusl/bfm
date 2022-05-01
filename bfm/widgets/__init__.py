@@ -112,7 +112,7 @@ class RootWidget(
             return
 
         if text.startswith("!"):
-            subprocess.call(text[1:], shell=True, cwd=self._w_folder.get_path())
+            subprocess.call(text[1:], shell=True, cwd=self._w_folder.path)
             # TODO: conditionally refresh
             self._w_folder.refresh()
             return
@@ -151,6 +151,6 @@ class RootWidget(
 
         self._w_extra.set_text(extra)
 
-    def _on_folder_path_changed(self, new_path: str):
+    def _on_folder_path_changed(self, old_path: str, new_path: str):
         self._w_path.set_text(("path", new_path))
         self._w_preview.clear()
