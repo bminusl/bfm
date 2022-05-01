@@ -7,11 +7,7 @@ import urwid
 from urwid import ExitMainLoop
 
 from bfm import config
-from bfm.keys import (
-    CallableCommandsMixin,
-    ClearInputStateMixin,
-    ExtendedCommandMap,
-)
+from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
 from bfm.vendor.ansi_widget import ANSIWidget
 
 from .fs import FolderWidget, ItemWidget
@@ -20,7 +16,6 @@ from .misc import MyEdit
 
 
 class RootWidget(
-    ClearInputStateMixin,
     CallableCommandsMixin,
     LastRenderedSizeMixin,
     urwid.PopUpLauncher,
@@ -82,6 +77,18 @@ class RootWidget(
 
     def error(self, message: str):
         self._w_command.set_caption(("error", message))
+
+    def keypress(self, size, key):
+        key = super().keypress(size, key)
+        # XXX: I am not a fan of putting this logic here.
+        # If the following condition is True, this means that the key was
+        # handled in a way or another, and the input_state queue can thus be
+        # cleared.
+        if key is None:
+            from bfm.keys import input_state
+
+            input_state.clear()
+        return key
 
     def _on_command_edit(self):
         self._w_frame.focus_footer()
