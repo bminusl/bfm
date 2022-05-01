@@ -42,6 +42,11 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
                 if os.path.lexists(self.path):
                     return f(self, *args, **kwargs)
                 else:
+                    from bfm import w_root
+
+                    w_root.error(
+                        "'{}': No such file or directory".format(self.path)
+                    )
                     return factory()
 
             return wrapper
