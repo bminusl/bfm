@@ -95,6 +95,8 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
 
     @_preverify_path()
     def delete(self):
+        # BUG found: send2trash raises an Exception is we try to delete a broken
+        # symlink. It seems to correctly delete a valid symlink though.
         send2trash(self.path)
         urwid.emit_signal(self, "require_refresh")
 
