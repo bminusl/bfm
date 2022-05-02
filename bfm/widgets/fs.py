@@ -208,6 +208,9 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         return key
 
     def refresh(self, change_focus: bool = False):
+        # NB: change_focus can be:
+        # a boolean: if True, it will focus the item based on `_focus_cache`.
+        # a path (str): it will focus the item corresponding to that path.
         signal_args = (self.body, "modified", self._on_body_modified)
         urwid.disconnect_signal(*signal_args)
 
@@ -225,7 +228,10 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             insort_left(self.body, w_item, key=self.sorting_key)
 
         if change_focus:
-            target_path = self._focus_cache.get(self.path)
+            if change_focus is True:
+                target_path = self._focus_cache.get(self.path)
+            else:
+                target_path = change_focus
             self.focus_item_by_path(target_path)
 
         urwid.connect_signal(*signal_args)
