@@ -69,6 +69,7 @@ class RootWidget(
         urwid.connect_signal(w_command, "validated", self._on_command_validated)
         urwid.connect_signal(w_folder, "focus_changed", self._on_folder_focus_changed)  # noqa: E501
         urwid.connect_signal(w_folder, "path_changed", self._on_folder_path_changed)  # noqa: E501
+        urwid.connect_signal(w_folder, "refreshed", self._on_folder_refreshed)  # noqa: E501
         # fmt: on
 
         urwid.PopUpLauncher.__init__(self, w_frame)
@@ -89,6 +90,38 @@ class RootWidget(
 
             input_state.clear()
         return key
+
+    def preview(self, w_item: ItemWidget):
+        self._w_preview.clear()
+
+        if hasattr(self, "_preview_proc"):
+            # [0]: Since `shell=True` is used in `subprocess.Popen(...)`, a
+            # simple call to `self._preview_proc.kill()` cannot be used. The
+            # process' children would not be killed and could still write to
+            # stdout.
+            # https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
+            os.killpg(os.getpgid(self._preview_proc.pid), signal.SIGTERM)
+            del self._preview_proc
+
+        if w_item:
+            extra = w_item.extra_metadata()
+
+            if os.path.isdir(w_item.path):
+                command = config.folder_preview
+            else:
+                command = config.file_preview
+            self._preview_proc = subprocess.Popen(
+                command.format(path=w_item.path),
+                shell=True,
+                stdout=self._preview_pipe_fd,
+                stderr=subprocess.STDOUT,
+                close_fds=True,
+                preexec_fn=os.setsid,  # see [0]
+            )
+        else:
+            extra = ""
+
+        self._w_extra.set_text(extra)
 
     def _on_command_edit(self):
         self._w_frame.focus_footer()
@@ -122,37 +155,11 @@ class RootWidget(
         self.error("Not an editor command: {}".format(text))
 
     def _on_folder_focus_changed(self, w_item: ItemWidget):
-        self._w_preview.clear()
-
-        if hasattr(self, "_preview_proc"):
-            # [0]: Since `shell=True` is used in `subprocess.Popen(...)`, a
-            # simple call to `self._preview_proc.kill()` cannot be used. The
-            # process' children would not be killed and could still write to
-            # stdout.
-            # https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
-            os.killpg(os.getpgid(self._preview_proc.pid), signal.SIGTERM)
-            del self._preview_proc
-
-        if w_item:
-            extra = w_item.extra_metadata()
-
-            if os.path.isdir(w_item.path):
-                command = config.folder_preview
-            else:
-                command = config.file_preview
-            self._preview_proc = subprocess.Popen(
-                command.format(path=w_item.path),
-                shell=True,
-                stdout=self._preview_pipe_fd,
-                stderr=subprocess.STDOUT,
-                close_fds=True,
-                preexec_fn=os.setsid,  # see [0]
-            )
-        else:
-            extra = ""
-
-        self._w_extra.set_text(extra)
+        self.preview(w_item)
 
     def _on_folder_path_changed(self, old_path: str, new_path: str):
         self._w_path.set_text(("path", new_path))
         self._w_preview.clear()
+
+    def _on_folder_refreshed(self):
+        self.preview(self._w_folder.get_focused_item())

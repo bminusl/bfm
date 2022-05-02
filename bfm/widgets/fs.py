@@ -123,7 +123,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
 
 
 class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
-    signals = ["focus_changed", "path_changed"]
+    signals = ["focus_changed", "path_changed", "refreshed"]
     _command_map = ExtendedCommandMap(
         {
             "h": lambda self: self.ascend(),
@@ -220,11 +220,13 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             w_item = self.create_item(path)
             insort_left(self.body, w_item, key=self.sorting_key)
 
-        urwid.connect_signal(*signal_args)
-
         if change_focus:
             target_path = self._focus_cache.get(self.path)
             self.focus_item_by_path(target_path)
+
+        urwid.connect_signal(*signal_args)
+
+        urwid.emit_signal(self, "refreshed")
 
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
