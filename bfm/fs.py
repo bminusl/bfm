@@ -35,9 +35,5 @@ class TreeNavigationMixin:
 
     def scanpath(self, path=None):
         with os.scandir(path or self.path) as it:
-            for entry in sorted(it, key=self.__sorting_key):
+            for entry in it:
                 yield entry.path
-
-    @staticmethod
-    def __sorting_key(entry: os.DirEntry):
-        return (not os.path.isdir(entry.path), entry.name.lower())

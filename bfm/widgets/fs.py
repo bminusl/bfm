@@ -13,6 +13,7 @@ from send2trash import send2trash
 from bfm import config
 from bfm.fs import TreeNavigationMixin, pretty_name
 from bfm.keys import CallableCommandsMixin, ExtendedCommandMap
+from bfm.vendor.bisect import insort_left
 
 from .popup import EditPopUp
 
@@ -98,7 +99,6 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         # BUG found: send2trash raises an Exception is we try to delete a broken
         # symlink. It seems to correctly delete a valid symlink though.
         send2trash(self.path)
-        # TODO: focus the next item
         urwid.emit_signal(self, "require_refresh")
 
     @_preverify_path()
@@ -113,7 +113,7 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
             except Exception:
                 # TODO: display error
                 return
-            urwid.emit_signal(self, "require_refresh")
+            urwid.emit_signal(self, "require_refresh", dst)
 
         from bfm import w_root
 
@@ -131,7 +131,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             "k": "cursor up",
             "gg": "cursor max left",
             "G": "cursor max right",
-            "r": lambda self: self.refresh(),
+            "r": lambda self: self.refresh(True),
         },
         aliases={
             "<backspace>": "h",
@@ -140,6 +140,11 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             "<up>": "k",
         },
     )
+
+    @staticmethod
+    def sorting_key(w_item: ItemWidget):
+        path = w_item.path
+        return (not os.path.isdir(path), os.path.basename(path).lower())
 
     def __init__(self):
         TreeNavigationMixin.__init__(self)
@@ -154,6 +159,12 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         self.change_path(new_path)
         return from_
 
+    def create_item(self, path: str):
+        w_item = ItemWidget(path)
+        urwid.connect_signal(w_item, "require_refresh", self.refresh)
+        urwid.connect_signal(w_item, "selected", self._on_item_selected)
+        return w_item
+
     def edit_file(self, path: str):
         from bfm import loop
 
@@ -162,6 +173,23 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         subprocess.call(config.editor.format(path=path), shell=True)
         loop.screen.start()
         self.refresh()
+
+    def focus_item(self, target_path: str):
+        if not self.body:
+            return
+        if target_path:
+            for i, w_item in enumerate(self.body):
+                if w_item.path == target_path:
+                    break
+            else:
+                # TODO: display error message
+                return
+        else:
+            i = 0
+        # NB: (intended) side effect: self.body emits the "modified" signal
+        # XXX: we do not use self.set_focus directly, because it seems to
+        # trigger the "modified" signal 3 times instead of once.
+        self.body.set_focus(i)
 
     def get_focused_item(self) -> ItemWidget:
         return self.get_focus()[0] if self.body else None
@@ -177,37 +205,30 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
 
         return key
 
-    def refresh(self):
+    def refresh(self, change_focus: bool = False):
+        # NB: change_focus can be:
+        # a boolean: if True, it will focus the item based on `_focus_cache`.
+        # a path (str): it will focus the item corresponding to that path.
         signal_args = (self.body, "modified", self._on_body_modified)
         urwid.disconnect_signal(*signal_args)
 
-        self.body.clear()
-        for path in self.scanpath():
-            w_item = ItemWidget(path)
-            self.body.append(w_item)
-            urwid.connect_signal(w_item, "require_refresh", self.refresh)
-            urwid.connect_signal(w_item, "selected", self._on_item_selected)
+        paths = list(self.scanpath())
+        # Remove items that no longer belong here
+        for w_item in list(self.body):
+            if w_item.path in paths:
+                paths.remove(w_item.path)
+            else:
+                self.body.remove(w_item)
+        # Add missing items
+        for path in paths:
+            w_item = self.create_item(path)
+            insort_left(self.body, w_item, key=self.sorting_key)
 
         urwid.connect_signal(*signal_args)
-        self.focus_correct_item()
 
-    def focus_correct_item(self):
-        if not self.body:
-            return
-        target_path = self._focus_cache.get(self.path)
-        if target_path:
-            for i, w_item in enumerate(self.body):
-                if w_item.path == target_path:
-                    break
-            else:
-                i = 0
-                # TODO: display error message
-        else:
-            i = 0
-        # NB: (intended) side effect: self.body emits the "modified" signal
-        # XXX: we do not use self.set_focus directly, because it seems to
-        # trigger the "modified" signal 3 times instead of once.
-        self.body.set_focus(i)
+        if change_focus is True:
+            target_path = self._focus_cache.get(self.path)
+            self.focus_item(target_path)
 
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
@@ -222,7 +243,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
             self.edit_file(w_item.path)
 
     def _on_path_changed(self, old_path: str, new_path: str):
-        self.refresh()
+        self.refresh(True)
 
     # https://github.com/urwid/urwid/issues/305
     def _keypress_max_left(self, *args, **kwargs):
