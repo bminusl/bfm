@@ -168,7 +168,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         urwid.connect_signal(w_item, "selected", self._on_item_selected)
         return w_item
 
-    def edit_file(self, path: str):
+    def open_in_editor(self, path: str):
         from bfm import loop
 
         # see https://github.com/urwid/urwid/issues/302
@@ -242,7 +242,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         if os.path.isdir(w_item.path):
             self.change_path(w_item.path)
         else:
-            self.edit_file(w_item.path)
+            self.open_in_editor(w_item.path)
 
     def _on_path_changed(self, old_path: str, new_path: str):
         self.refresh(True)
