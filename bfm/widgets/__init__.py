@@ -133,24 +133,26 @@ class RootWidget(
             os.killpg(os.getpgid(self._preview_proc.pid), signal.SIGTERM)
             del self._preview_proc
 
-        assert w_item is not None, w_item
-        extra = w_item.extra_metadata()
-        self._w_extra.set_text(extra)
+        if w_item:
+            extra = w_item.extra_metadata()
 
-        if os.path.isdir(w_item.path):
-            command = config.folder_preview
+            if os.path.isdir(w_item.path):
+                command = config.folder_preview
+            else:
+                command = config.file_preview
+            self._preview_proc = subprocess.Popen(
+                command.format(path=w_item.path),
+                shell=True,
+                stdout=self._preview_pipe_fd,
+                stderr=subprocess.STDOUT,
+                close_fds=True,
+                preexec_fn=os.setsid,  # see [0]
+            )
         else:
-            command = config.file_preview
-        self._preview_proc = subprocess.Popen(
-            command.format(path=w_item.path),
-            shell=True,
-            stdout=self._preview_pipe_fd,
-            stderr=subprocess.STDOUT,
-            close_fds=True,
-            preexec_fn=os.setsid,  # see [0]
-        )
+            extra = ""
+
+        self._w_extra.set_text(extra)
 
     def _on_folder_path_changed(self, old_path: str, new_path: str):
         self._w_path.set_text(("path", new_path))
         self._w_preview.clear()
-        self._w_extra.set_text("")
