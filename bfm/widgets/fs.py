@@ -174,7 +174,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         loop.screen.start()
         self.refresh()
 
-    def focus_item(self, target_path: str):
+    def focus_item_by_path(self, target_path: str):
         if not self.body:
             return
         if target_path:
@@ -186,7 +186,6 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
                 return
         else:
             i = 0
-        # NB: (intended) side effect: self.body emits the "modified" signal
         # XXX: we do not use self.set_focus directly, because it seems to
         # trigger the "modified" signal 3 times instead of once.
         self.body.set_focus(i)
@@ -223,9 +222,9 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
 
         urwid.connect_signal(*signal_args)
 
-        if change_focus is True:
+        if change_focus:
             target_path = self._focus_cache.get(self.path)
-            self.focus_item(target_path)
+            self.focus_item_by_path(target_path)
 
     def _on_body_modified(self):
         urwid.emit_signal(self, "focus_changed", self.get_focused_item())
