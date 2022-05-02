@@ -16,7 +16,6 @@ def pretty_name(path: str, basename: bool = True):
 class TreeNavigationMixin:
     def __init__(self):
         self.path = None
-        urwid.connect_signal(self, "path_changed", self._on_path_changed)
 
     def ascend(self):
         new_path, from_ = os.path.split(self.path)
@@ -28,6 +27,8 @@ class TreeNavigationMixin:
         self.path = new_path
         # XXX: the child class needs to manually define this signal
         urwid.emit_signal(self, "path_changed", old_path, new_path)
+        # NB: Order is important
+        self._on_path_changed(old_path, new_path)
 
     def descend(self, into: str):
         new_path = os.path.join(self.path, into)
