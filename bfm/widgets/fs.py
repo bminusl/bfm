@@ -94,6 +94,9 @@ class ItemWidget(CallableCommandsMixin, urwid.WidgetWrap):
         )
         return " ".join(map(str, [mode, nlink, user, group, mtime]))
 
+    def update_widget(self):
+        self._w = self.generate_widget()
+
     @_preverify_path()
     def delete(self):
         # BUG found: send2trash raises an Exception is we try to delete a broken
@@ -212,6 +215,7 @@ class FolderWidget(CallableCommandsMixin, TreeNavigationMixin, urwid.ListBox):
         # Remove items that no longer belong here
         for w_item in list(self.body):
             if w_item.path in paths:
+                w_item.update_widget()
                 paths.remove(w_item.path)
             else:
                 self.body.remove(w_item)
